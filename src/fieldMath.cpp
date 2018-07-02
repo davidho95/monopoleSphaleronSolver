@@ -1,119 +1,244 @@
-#include "LATfield2.hpp"
+// #include "LATfield2.hpp"
 #include <cmath>
 #include <complex>
 #include <ctime>
 #include <iostream>
+#include <array>
+#include "fieldMath.h"
 
-using namespace LATfield2;
+// using namespace LATfield2;
 
-template <class FieldType, class FuncType>
-auto mapLocalFcn(Field<FieldType> &field, FuncType localFcn) {
-  Lattice &lat = field.lattice();
-  Field<FieldType> out(lat);
-  Site x(lat);
+// template <class FieldType>
+// Field<FieldType> operator+(Field<FieldType> &a, Field<FieldType> &b) {
+//   Lattice &lat = a.lattice();
+//   Field<FieldType> out(lat);
+  
+//   Site x(lat);
+//   for (x.first(); x.test(); x.next()) {
+//     out(x) = a(x) + b(x);
+//   }
+//   out.updateHalo();
+  
+//   return out;
+// }
 
-  for (x.first(); x.test(); x.next()) {
-    out(x) = localFcn(field(x));
-  }
+// template <class FieldType>
+// Field<FieldType> operator+=(Field<FieldType> &a, Field<FieldType> &b) {
+//   Lattice &lat = a.lattice();
+//   int numElem = lat.sitesGross();
+//   for (int iElem = 0; iElem < numElem; iElem++) {
+//     a.data_[iElem] += b.data_[iElem];
+//   }
+// }
 
-  out.updateHalo();
+// template <class FieldType>
+// Field<FieldType> operator-(Field<FieldType> &a, Field<FieldType> &b) {
+//   Lattice &lat = a.lattice();
+//   Field<FieldType> out(lat);
+//   int numElem = lat.sitesGross();
+//   for (int iElem = 0; iElem < numElem; iElem++) {
+//     out.data_[iElem] = a.data_[iElem] - b.data_[iElem];
+//   }
+  
+//   return out;
+// }
 
-  return out;
-}
+// template <class FieldType>
+// Field<FieldType> operator-=(Field<FieldType> &a, Field<FieldType> &b) {
+//   Lattice &lat = a.lattice();
+//   int numElem = lat.sitesGross();
+//   for (int iElem = 0; iElem < numElem; iElem++) {
+//     a.data_[iElem] -= b.data_[iElem];
+//   }
+// }
 
-template <
-  class FieldType1,
-  class FieldType2,
-  class FuncType,
-  class outType = result_of_t<FuncType(FieldType1, FieldType2)>
-  >
-Field<outType> mapBinaryFcn(Field<FieldType1> &field1, Field<FieldType2> &field2, FuncType binaryFcn) {
-  // TODO: size check
-  Lattice &lat = field1.lattice();
-  Site x(lat);
+// template <class FieldType>
+// Field<FieldType> operator*(Field<FieldType> &a, Field<FieldType> &b) {
+//   Lattice &lat = a.lattice();
+//   Field<FieldType> out(lat);
+//   int numElem = lat.sitesGross();
+//   for (int iElem = 0; iElem < numElem; iElem++) {
+//     out.data_[iElem] = a.data_[iElem] * b.data_[iElem];
+//   }
+  
+//   return out;
+// }
 
-  Field<outType> out(lat);
+// template <class FieldType>
+// Field<FieldType> operator/(Field<FieldType> &a, Field<FieldType> &b) {
+//   Lattice &lat = a.lattice();
+//   Field<FieldType> out(lat);
+//   int numElem = lat.sitesGross();
+//   for (int iElem = 0; iElem < numElem; iElem++) {
+//     out.data_[iElem] = a.data_[iElem] / b.data_[iElem];
+//   }
+  
+//   return out;
+// }
 
-  for (x.first(); x.test(); x.next()) {
-    out(x) = binaryFcn(field1(x), field2(x));
-  }
+// template <class FieldType, class FuncType>
+// auto mapLocalFcn(Field<FieldType> &field, FuncType localFcn) {
+//   Lattice &lat = field.lattice();
+//   Field<FieldType> out(lat);
+//   Site x(lat);
+//   int numCpts = field.components();
 
-  out.updateHalo();
+//   for (x.first(); x.test(); x.next()) {
+//     for (int iCpt = 0; iCpt < numCpts; iCpt++) {
+//       out(x, iCpt) = localFcn(field, x);
+//     }
+//   }
 
-  return out;
-} 
+//   out.updateHalo();
 
-template <class FieldType, class FuncType>
-void mapInplace(Field<FieldType> &field, FuncType localFcn) {
-  Lattice &lat = field.lattice();
-  Site x(lat);
+//   return out;
+// }
 
-  for (x.first(); x.test(); x.next()) {
-    field(x) = localFcn(field(x));
-  }
+// template <
+//   class FieldType1,
+//   class FieldType2,
+//   class FuncType,
+//   class outType = result_of_t<FuncType(FieldType1, FieldType2)>
+//   >
+// Field<outType> mapBinaryFcn(Field<FieldType1> &field1, Field<FieldType2> &field2, FuncType binaryFcn) {
+//   // TODO: size check
+//   Lattice &lat = field1.lattice();
+//   Site x(lat);
 
-  field.updateHalo();
-}
+//   Field<outType> out(lat);
+
+//   for (x.first(); x.test(); x.next()) {
+//     out(x) = binaryFcn(field1(x), field2(x));
+//   }
+
+//   out.updateHalo();
+
+//   return out;
+// } 
+
+// template <class FieldType>
+// Field<FieldType> diff(Field<FieldType> &field, int dim, bool isForward) {
+//   Lattice &lat = field.lattice();
+//   Site x(lat);
+//   int numCpts = field.components();
+
+//   Field<FieldType> out(lat);
+
+//   if (isForward) {
+//     for (x.first(); x.test(); x.next()) {
+//       for (int iCpt = 0; iCpt < numCpts; iCpt++) {
+//         out(x, iCpt) = field(x + dim, iCpt) - field(x, iCpt);
+//       }
+//     }
+//   } else {
+//     for (x.first(); x.test(); x.next()) {
+//       for (int iCpt = 0; iCpt < numCpts; iCpt++) {
+//         out(x, iCpt) = -(field(x - dim, iCpt) - field(x, iCpt));
+//       }
+//     }
+//   }
+
+//   out.updateHalo();
+
+//   return out;
+// }
+
+// template <class FieldType>
+// Field<FieldType> laplacian(Field<FieldType> &field) {
+//   Lattice &lat = field.lattice();
+//   Site x(lat);
+//   int numCpts = field.components();
+//   int dim = lat.dim();
+
+//   Field<FieldType> out(lat);
+
+//   for (x.first(); x.test(); x.next()) {
+//     for (int iCpt = 0; iCpt < numCpts; iCpt++) {
+//       for (int iDim = 0; iDim < dim; iDim++) {
+//         out(x, iCpt) += field(x + iDim, iCpt) + field(x - iDim, iCpt) - 2*field(x, iCpt);
+//       }
+//     }
+//   }
+
+//   out.updateHalo();
+
+//   return out;
+// }
 
 template <class FieldType>
-FieldType fieldSum(Field<FieldType> &field) {
-  Site x(field.lattice());
-  FieldType total = field(x) - field(x); // Sets total to additive identity of FieldType
-
-  for (x.first(); x.test(); x.next()) {
-    total += field(x);
+LATfield2::Field<FieldType> curl(LATfield2::Field<FieldType> &field, bool isForward) {
+  LATfield2::Lattice &lat = field.lattice();
+  LATfield2::Site x(lat);
+  int numCpts = field.components();
+  int dim = lat.dim();
+  if (numCpts != 3 && dim != 3) {
+    std::cerr << "Curl is only defined for 3D vector fields with 3 components" << endl;
   }
 
-  return total;
-}
+  LATfield2::Field<FieldType> out(lat, numCpts);
 
-complex<double> quarticPotential(const complex<double> z, const double vev) {
-  complex<double> out = pow(vev,2) - pow(abs(z), 2);
-  out = pow(out, 2);
+  if (isForward) {
+    for (x.first(); x.test(); x.next()) {
+      out(x, 0) = field(x + 1, 2) - field(x, 2) - field(x + 2, 1) + field(x,1);
+      out(x, 1) = field(x + 2, 0) - field(x, 0) - field(x + 0, 2) + field(x,2);
+      out(x, 2) = field(x + 0, 1) - field(x, 1) - field(x + 1, 0) + field(x,0);
+    }
+  } else {
+    for (x.first(); x.test(); x.next()) {
+      out(x, 0) = -(field(x - 1, 2) - field(x, 2) - field(x - 2, 1) + field(x,1));
+      out(x, 1) = -(field(x - 2, 0) - field(x, 0) - field(x - 0, 2) + field(x,2));
+      out(x, 2) = -(field(x - 0, 1) - field(x, 1) - field(x - 1, 0) + field(x,0));
+    }
+  }
+  out.updateHalo();
 
   return out;
 }
 
-complex<double> quarticPotentialDeriv(const complex<double> z, const double vev) {
-  complex<double> out = pow(vev,2) - pow(abs(z), 2);
-  out = z*out;
+// int main() {
+//   parallel.initialize(1,1);
 
-  return out;
-}
+//   srand(time(NULL) + parallel.rank());
 
-int main() {
-  parallel.initialize(1,1);
+//   int dim = 3;
+//   int latSize[dim] = {2,2,2};
+//   int halo = 1;
+//   Lattice lat(dim,latSize,halo);
 
-  srand(time(NULL) + parallel.rank());
+//   // double vev = 1;
 
-  int dim = 2;
-  int latSize[dim] = {2,2};
-  int halo = 1;
-  Lattice lat(dim,latSize,halo);
+//   Field<double> phi(lat,3);
 
-  // double vev = 1;
+//   Site x(lat);
 
-  Field<complex<double>> phi1(lat);
-  Field<complex<double>> phi2(lat);
+//   int count = 0;
+//   for (x.first(); x.test(); x.next()) {
+//     for (int iCpt = 0; iCpt < 3; iCpt++) {
+//       phi(x,iCpt) = count;
+//     }
+//     count++;
+//   }
 
-  Site x(lat);
+//   phi.updateHalo();
+//   Field<double> curlPhi = curl(phi, true);
+//   Field<double> curlCurlPhi = curl(curlPhi, false);
 
-  for (x.first(); x.test(); x.next()) {
-    phi1(x) = ((rand() % 10 + 1) + (rand() % 10)*1i) / 10.0;
-    phi2(x) = ((rand() % 10 + 1) + (rand() % 10)*1i) / 10.0;
-  }
+//   for (x.first(); x.test(); x.next()) {
+//     for (int iCpt = 0; iCpt < 3; iCpt++) {
+//       cout << phi(x,iCpt) << " " << curlCurlPhi(x,iCpt) << endl;
+//     }
+//   }
 
-  // auto quarticPotentialFcn = [vev] (complex<double> z) { return quarticPotential(z, vev); };
-  // auto quarticPotentialDerivFcn = [vev] (complex<double> z) { return quarticPotentialDeriv(z, vev); };
-
-  // double step = 0.1;
-  // int numSteps = 100;
-
-  // auto gradIter = [vev, step] (complex<double> z) { return z + step*quarticPotentialDeriv(z, vev); };
-
+  // int numTrials = 100;
   // clock_t tStart = clock();
-  // for (int ii = 0; ii < numSteps; ++ii) {
-  //   mapInplace(phi, gradIter);
+  // for (int ii = 0; ii < numTrials; ++ii) {
+  //   laplacian(phi);
+  // }
+  // printf("Time taken: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
+
+  // tStart = clock();
+  // for (int ii = 0; ii < numTrials; ++ii) {
+  //   laplacian2(phi);
   // }
   // printf("Time taken: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
 
@@ -123,15 +248,5 @@ int main() {
   // parallel.sum(E);
   // cout << E << endl;
 
-  auto mult = [] (complex<double> a, complex<double> b) { return a*b; };
-
-  Field<complex<double>> phi3 = mapBinaryFcn(phi1, phi2, mult);
-
-  for (x.first(); x.test(); x.next()) {
-    cout << phi1(x) << endl;
-    cout << phi2(x) << endl;
-    cout << phi3(x) << endl;
-  }
-
-  return 0;
-}
+//   return 0;
+// }
