@@ -9,14 +9,15 @@ namespace monsta {
   class FreeSpaceMagneticMaxwellSolver: public GradDescentSolver<double>
   {
   public:
-    FreeSpaceMagneticMaxwellSolver(double tol, int maxIterations) 
-      : GradDescentSolver(tol, maxIterations) {}
+    FreeSpaceMagneticMaxwellSolver(LATfield2::Lattice &lattice, int numCpts, double tol,
+      int maxIterations) 
+      : GradDescentSolver(lattice, numCpts, tol, maxIterations) {}
 
   private:
     double vev_;
     double selfCoupling_;
 
-    double energyDensity(LATfield2::Field<double> &field, LATfield2::Site &site) const
+    double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site) const
     {
       double E = 0;
         E += pow(field(site+1, 2) - field(site, 2) - field(site+2, 1) + field(site,1), 2);
@@ -26,7 +27,7 @@ namespace monsta {
       return 0.5*E;
     }
 
-    double gradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt) const
+    double getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt) const
     {
       double grad;
       switch (cpt) {

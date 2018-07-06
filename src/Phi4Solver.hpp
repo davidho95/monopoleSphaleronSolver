@@ -8,8 +8,10 @@
 namespace monsta {
   class Phi4Solver: public GradDescentSolver<double> {
   public:
-    Phi4Solver(double tol, int maxIterations, double vev, double selfCoupling) 
-      : GradDescentSolver(tol, maxIterations) {
+    Phi4Solver(LATfield2::Lattice &lattice, int numCpts, double tol,
+      int maxIterations, double vev, double selfCoupling) 
+      : GradDescentSolver(lattice, numCpts, tol, maxIterations)
+    {
       this->vev_ = vev;
       this->selfCoupling_ = selfCoupling;
     }
@@ -18,7 +20,7 @@ namespace monsta {
     double vev_;
     double selfCoupling_;
 
-    double energyDensity(LATfield2::Field<double> &field, LATfield2::Site &site) const
+    double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site) const
     {
       int numCpts = field.components();
       double absFieldSqr = 0;
@@ -29,7 +31,7 @@ namespace monsta {
       return E;
     }
 
-    double gradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt) const
+    double getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt) const
     {
       int numCpts = field.components();
       double absFieldSqr = 0;
