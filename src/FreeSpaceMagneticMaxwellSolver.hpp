@@ -14,9 +14,6 @@ namespace monsta {
       : GradDescentSolver(lattice, numCpts, tol, maxIterations) {}
 
   private:
-    double vev_;
-    double selfCoupling_;
-
     double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site) const
     {
       double E = 0;

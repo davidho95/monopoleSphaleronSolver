@@ -113,6 +113,7 @@ namespace monsta {
     bool initialized_ = false;
     bool verbose_ = true;
     bool storingPrevEnergy_ = true;
+    bool storingPrevField_ = true;
     double prevEnergy_;
     LATfield2::Field<FieldType> prevField_;
 
@@ -129,7 +130,7 @@ namespace monsta {
       }
     }
 
-    virtual void updateGradient()
+    void updateGradient()
     {
       LATfield2::Site site(lattice_);
       double maxGrad = 0;
@@ -166,7 +167,7 @@ namespace monsta {
     }
 
     // Performs a single gradient descent iteration, returning the maximum gradient
-    virtual void iterate()
+    void iterate()
     {
       LATfield2::Site site(lattice_);
 
@@ -176,14 +177,17 @@ namespace monsta {
       {
         for (int iCpt = 0; iCpt < numCpts_; iCpt++)
         {
-          if (initialized_) {
+          if (initialized_ && storingPrevField_)
+          {
             prevField_(site, iCpt) = field_(site, iCpt);
           }
           field_(site, iCpt) -= stepSize_ * gradient_(site, iCpt);
         }
       }
       field_.updateHalo();
-      prevField_.updateHalo();
+
+      if (initialized_ && storingPrevField_) { prevField_.updateHalo(); }
+
       if (storingPrevEnergy_)
       {
         prevEnergy_ = energy_;

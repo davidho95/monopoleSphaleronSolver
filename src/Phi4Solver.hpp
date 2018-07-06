@@ -10,10 +10,11 @@ namespace monsta {
   public:
     Phi4Solver(LATfield2::Lattice &lattice, int numCpts, double tol,
       int maxIterations, double vev, double selfCoupling) 
-      : GradDescentSolver(lattice, numCpts, tol, maxIterations)
+      : GradDescentSolver(lattice, numCpts, tol, maxIterations),
+        vev_(vev), selfCoupling_(selfCoupling)
     {
-      this->vev_ = vev;
-      this->selfCoupling_ = selfCoupling;
+      // vev_ = vev;
+      // selfCoupling_ = selfCoupling;
     }
 
   private:
@@ -27,7 +28,7 @@ namespace monsta {
       for (int iCpt = 0; iCpt < numCpts; iCpt++) {
         absFieldSqr += pow(field(site,iCpt), 2);
       }
-      double E = this->selfCoupling_ * pow(absFieldSqr - pow(this->vev_, 2), 2);
+      double E = selfCoupling_ * pow(absFieldSqr - pow(vev_, 2), 2);
       return E;
     }
 
@@ -38,7 +39,7 @@ namespace monsta {
       for (int iCpt = 0; iCpt < numCpts; iCpt++) {
         absFieldSqr += pow(field(site,iCpt), 2);
       }
-      double grad = 4 * this->selfCoupling_ * field(site,cpt)*(absFieldSqr - pow(this->vev_, 2));
+      double grad = 4 * selfCoupling_ * field(site,cpt)*(absFieldSqr - pow(vev_, 2));
       return grad;
     }
   };
