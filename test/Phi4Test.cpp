@@ -16,23 +16,11 @@ int main() {
   double tol = 1e-6;
 
   LATfield2::Lattice lat(dim, latSize, haloSize);
-  LATfield2::Field<double> testField(lat, numCpts);
-  LATfield2::Site site(lat);
 
-  // Initialise random test field
-  for (site.first(); site.test(); site.next())
-  {
-    for (int iCpt = 0; iCpt < numCpts; iCpt++)
-    {
-      testField(site,iCpt) = (std::rand() % 100) / 100.0;
-    }
-  }
-  testField.updateHalo();
+  monsta::Phi4Solver solver(lat,1,1,1,1,1);
+  monsta::GradientChecker<double> gradChecker(tol, false);
 
-  monsta::Phi4Solver solver(1,1,1,1);
-  monsta::GradientChecker<double> gradChecker(tol);
-
-  gradChecker.checkGradients(solver, testField);
+  gradChecker.checkGradients(solver);
 
   return 0;
 }

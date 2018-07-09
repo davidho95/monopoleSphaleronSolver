@@ -9,10 +9,12 @@ namespace monsta {
   class GradDescentSolver {
   public:
     bool solnFound_ = false;
+    LATfield2::Lattice &lattice_;
     LATfield2::Field<FieldType> field_;
     double energy_ = 0;
     LATfield2::Field<FieldType> gradient_;
     double maxGrad_ = 1e6;
+    int numCpts_;
 
     GradDescentSolver(LATfield2::Lattice &lattice, int numCpts, double tol, int maxIterations)
     : lattice_(lattice), numCpts_(numCpts), tol_(tol), maxIterations_(maxIterations)
@@ -23,9 +25,84 @@ namespace monsta {
       gradient_.alloc();
       prevField_.initialize(lattice_, numCpts_);
       prevField_.alloc();
+
+      setInitialField(); //EVIL
+    }
+
+    GradDescentSolver(LATfield2::Lattice &lattice, int numCpts, double tol, int maxIterations,
+      double initVal)
+    : lattice_(lattice), numCpts_(numCpts), tol_(tol), maxIterations_(maxIterations)
+    {
+      field_.initialize(lattice_, numCpts_);
+      field_.alloc();
+      gradient_.initialize(lattice_, numCpts_);
+      gradient_.alloc();
+      prevField_.initialize(lattice_, numCpts_);
+      prevField_.alloc();
+
+      setInitialField(initVal); //EVIL
+    }
+
+    GradDescentSolver(LATfield2::Lattice &lattice, int numCpts, double tol, int maxIterations,
+      LATfield2::Field<FieldType> &initField)
+    : lattice_(lattice), numCpts_(numCpts), tol_(tol), maxIterations_(maxIterations)
+    {
+      field_.initialize(lattice_, numCpts_);
+      field_.alloc();
+      gradient_.initialize(lattice_, numCpts_);
+      gradient_.alloc();
+      prevField_.initialize(lattice_, numCpts_);
+      prevField_.alloc();
+
+      setInitialField(initField); //EVIL
     }
 
     void setVerbosity(bool isVerbose) { verbose_ = isVerbose; }
+
+    void changeFieldValue(LATfield2::Site &site, int cpt, FieldType value)
+    {
+      field_(site, cpt) = value;
+      field_.updateHalo();
+      updateEnergy();
+      updateGradient();
+    }
+
+    void solve() {
+      int numIters = 0;
+      while (abs(maxGrad_) > tol_ && numIters < maxIterations_) {
+        numIters++;
+        iterate();
+        if (verbose_)
+        {
+          cout << maxGrad_ << endl;
+        }
+      }
+      updateEnergy();
+
+      if (numIters < maxIterations_) {
+        solnFound_ = true;
+        std::cout << "Gradient descent finished in " << numIters << " iterations." << std::endl;
+        std::cout << "Minimum energy: " << energy_ << std::endl;
+      } else {
+        std::cout << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
+        std::cout << "Maximum gradient: " << maxGrad_ << std::endl;
+        std::cout << "Energy reached: " << energy_ << std::endl;
+      }
+    }
+
+  protected:
+    int maxIterations_;
+    double tol_;
+    double stepSize_ = 0.01;
+    bool initialized_ = false;
+    bool verbose_ = true;
+    bool storingPrevEnergy_ = true;
+    bool storingPrevField_ = true;
+    double prevEnergy_;
+    LATfield2::Field<FieldType> prevField_;
+
+    virtual double getLocalEnergyDensity(LATfield2::Field<FieldType> &field, LATfield2::Site &site) const = 0;
+    virtual double getLocalGradient(LATfield2::Field<FieldType> &field, LATfield2::Site &site, int cpt) const = 0;
 
     // Initialise field to random array of doubles
     void setInitialField()
@@ -80,45 +157,6 @@ namespace monsta {
       updateGradient();
       initialized_ = true;
     }
-
-    void solve() {
-      int numIters = 0;
-      while (abs(maxGrad_) > tol_ && numIters < maxIterations_) {
-        numIters++;
-        iterate();
-        if (verbose_)
-        {
-          cout << maxGrad_ << endl;
-        }
-      }
-      updateEnergy();
-
-      if (numIters < maxIterations_) {
-        solnFound_ = true;
-        std::cout << "Gradient descent finished in " << numIters << " iterations." << std::endl;
-        std::cout << "Minimum energy: " << energy_ << std::endl;
-      } else {
-        std::cout << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
-        std::cout << "Maximum gradient: " << maxGrad_ << std::endl;
-        std::cout << "Energy reached: " << energy_ << std::endl;
-      }
-    }
-
-  protected:
-    LATfield2::Lattice lattice_;
-    int numCpts_;
-    int maxIterations_;
-    double tol_;
-    double stepSize_ = 0.01;
-    bool initialized_ = false;
-    bool verbose_ = true;
-    bool storingPrevEnergy_ = true;
-    bool storingPrevField_ = true;
-    double prevEnergy_;
-    LATfield2::Field<FieldType> prevField_;
-
-    virtual double getLocalEnergyDensity(LATfield2::Field<FieldType> &field, LATfield2::Site &site) const = 0;
-    virtual double getLocalGradient(LATfield2::Field<FieldType> &field, LATfield2::Site &site, int cpt) const = 0;
 
     void updateEnergy()
     {

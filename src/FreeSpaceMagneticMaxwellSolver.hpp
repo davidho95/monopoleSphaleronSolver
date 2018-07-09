@@ -20,7 +20,6 @@ namespace monsta {
         E += pow(field(site+1, 2) - field(site, 2) - field(site+2, 1) + field(site,1), 2);
         E += pow(field(site+2, 0) - field(site, 0) - field(site+0, 2) + field(site,2), 2);
         E += pow(field(site+0, 1) - field(site, 1) - field(site+1, 0) + field(site,0), 2);
-      // cout << E << endl;
       return 0.5*E;
     }
 
@@ -29,7 +28,7 @@ namespace monsta {
       double grad;
       switch (cpt) {
         case 0:
-        grad = -field(site-1, 0) - field(site-2, 0) + 4*field(site, 0) - field(site+2, 0) - 
+          grad = -field(site-1, 0) - field(site-2, 0) + 4*field(site, 0) - field(site+2, 0) - 
             field(site+1, 0) + field(site-1, 1) - field(site, 1) - field(site+0-1, 1) + 
             field(site+0, 1) + field(site-2, 2) - field(site, 2) - field(site+0-2, 2) + 
             field(site+0, 2);
