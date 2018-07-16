@@ -1,5 +1,5 @@
-#ifndef FREEMONOPOLETHEORY_HPP
-#define FREEMONOPOLETHEORY_HPP
+#ifndef MKGMONOPOLETHEORY_HPP
+#define MKGMONOPOLETHEORY_HPP
 
 #include "LATfield2.hpp"
 #include "Theory.hpp"
@@ -22,9 +22,9 @@ namespace monsta
     double selfCoupling_;
 
     double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site,
-      LATfield2::Field<double> *extraField = NULL) const;
+      LATfield2::Field<double> &sinCosField) const;
     double getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt,
-      LATfield2::Field<double> *extraField = NULL) const;
+      LATfield2::Field<double> &sinCosField) const;
     void generatePrecomputedValues(LATfield2::Field<double> &field, LATfield2::Field<double> &destinationField) const;
   };
 
@@ -62,7 +62,7 @@ namespace monsta
   }
 
   double MkgMonopoleTheory::getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site,
-    LATfield2::Field<double> *extraField) const
+    LATfield2::Field<double> &sinCosField) const
   {
     int xCoord = site.coord(0);
     int yCoord = site.coord(1);
@@ -83,40 +83,41 @@ namespace monsta
       cosField[iCpt] = cos(electricCharge_*field(site, iCpt));
     }
 
+    int numGaugeCpts = 3;
     double E = 0;
     E += (pow(field(site, 0) - field(site+1, 0) - field(site, 1) + field(site+0, 1),2) + 
         pow(field(site, 1) - field(site+2, 1) - field(site, 2) + field(site+1, 2) + Bx,2) + 
         pow(field(site, 0) - field(site+2, 0) - field(site, 2) + field(site+0, 2),2))/2.;
-    E += pow(cosField[0],2)*pow(field(site, 3),2) + 
-        pow(cosField[1],2)*pow(field(site, 3),2) + 
-        pow(cosField[2],2)*pow(field(site, 3),2) + 
-        pow(sinField[0],2)*pow(field(site, 3),2) + 
-        pow(sinField[1],2)*pow(field(site, 3),2) + 
-        pow(sinField[2],2)*pow(field(site, 3),2);
-    E += -2*cosField[2]*field(site, 3)*field(site+2, 3) + pow(field(site+2, 3),2) - 
-        2*cosField[1]*field(site, 3)*field(site+1, 3) + pow(field(site+1, 3),2) - 
-        2*cosField[0]*field(site, 3)*field(site+0, 3) + pow(field(site+0, 3),2) - 
-        2*sinField[2]*field(site+2, 3)*field(site, 4) - 
-        2*sinField[1]*field(site+1, 3)*field(site, 4) - 
-        2*sinField[0]*field(site+0, 3)*field(site, 4);
-    E += pow(cosField[0],2)*pow(field(site, 4),2) + 
-        pow(cosField[1],2)*pow(field(site, 4),2) + 
-        pow(cosField[2],2)*pow(field(site, 4),2) + 
-        pow(sinField[0],2)*pow(field(site, 4),2) + 
-        pow(sinField[1],2)*pow(field(site, 4),2) + 
-        pow(sinField[2],2)*pow(field(site, 4),2);
+    E += pow(sinCosField(site, 0+numGaugeCpts),2)*pow(field(site, 3),2) + 
+        pow(sinCosField(site, 1+numGaugeCpts),2)*pow(field(site, 3),2) + 
+        pow(sinCosField(site, 2+numGaugeCpts),2)*pow(field(site, 3),2) + 
+        pow(sinCosField(site, 0),2)*pow(field(site, 3),2) + 
+        pow(sinCosField(site, 1),2)*pow(field(site, 3),2) + 
+        pow(sinCosField(site, 2),2)*pow(field(site, 3),2);
+    E += -2*sinCosField(site, 2+numGaugeCpts)*field(site, 3)*field(site+2, 3) + pow(field(site+2, 3),2) - 
+        2*sinCosField(site, 1+numGaugeCpts)*field(site, 3)*field(site+1, 3) + pow(field(site+1, 3),2) - 
+        2*sinCosField(site, 0+numGaugeCpts)*field(site, 3)*field(site+0, 3) + pow(field(site+0, 3),2) - 
+        2*sinCosField(site, 2)*field(site+2, 3)*field(site, 4) - 
+        2*sinCosField(site, 1)*field(site+1, 3)*field(site, 4) - 
+        2*sinCosField(site, 0)*field(site+0, 3)*field(site, 4);
+    E += pow(sinCosField(site, 0+numGaugeCpts),2)*pow(field(site, 4),2) + 
+        pow(sinCosField(site, 1+numGaugeCpts),2)*pow(field(site, 4),2) + 
+        pow(sinCosField(site, 2+numGaugeCpts),2)*pow(field(site, 4),2) + 
+        pow(sinCosField(site, 0),2)*pow(field(site, 4),2) + 
+        pow(sinCosField(site, 1),2)*pow(field(site, 4),2) + 
+        pow(sinCosField(site, 2),2)*pow(field(site, 4),2);
     E += selfCoupling_*pow(-pow(vev_,2) + pow(field(site, 3),2) + pow(field(site, 4),2),2);
-    E += 2*sinField[2]*field(site, 3)*field(site+2, 4) - 
-        2*cosField[2]*field(site, 4)*field(site+2, 4) + pow(field(site+2, 4),2) + 
-        2*sinField[1]*field(site, 3)*field(site+1, 4) - 
-        2*cosField[1]*field(site, 4)*field(site+1, 4) + pow(field(site+1, 4),2) + 
-        2*sinField[0]*field(site, 3)*field(site+0, 4) - 
-        2*cosField[0]*field(site, 4)*field(site+0, 4) + pow(field(site+0, 4),2);
+    E += 2*sinCosField(site, 2)*field(site, 3)*field(site+2, 4) - 
+        2*sinCosField(site, 2+numGaugeCpts)*field(site, 4)*field(site+2, 4) + pow(field(site+2, 4),2) + 
+        2*sinCosField(site, 1)*field(site, 3)*field(site+1, 4) - 
+        2*sinCosField(site, 1+numGaugeCpts)*field(site, 4)*field(site+1, 4) + pow(field(site+1, 4),2) + 
+        2*sinCosField(site, 0)*field(site, 3)*field(site+0, 4) - 
+        2*sinCosField(site, 0+numGaugeCpts)*field(site, 4)*field(site+0, 4) + pow(field(site+0, 4),2);
     return E;
   }
 
   double MkgMonopoleTheory::getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt,
-    LATfield2::Field<double> *sinCosField) const
+    LATfield2::Field<double> &sinCosField) const
   {
     int xCoord = site.coord(0);
     int yCoord = site.coord(1);
@@ -140,50 +141,50 @@ namespace monsta
           - field(site+1, 0) + field(site-1, 1) - field(site, 1) - field(site+0-1, 1)
           + field(site+0, 1) + field(site-2, 2) - field(site, 2) - field(site+0-2, 2)
           + field(site+0, 2)
-          + 2*electricCharge_*sinCosField->operator()(site, 0)*field(site, 3)*field(site+0, 3)
-          - 2*electricCharge_*sinCosField->operator()(site, 0+numGaugeCpts)*field(site+0, 3)*field(site, 4)
-          + 2*electricCharge_*sinCosField->operator()(site, 0+numGaugeCpts)*field(site, 3)*field(site+0, 4)
-          + 2*electricCharge_*sinCosField->operator()(site, 0)*field(site, 4)*field(site+0, 4);
+          + 2*electricCharge_*sinCosField(site, 0)*field(site, 3)*field(site+0, 3)
+          - 2*electricCharge_*sinCosField(site, 0+numGaugeCpts)*field(site+0, 3)*field(site, 4)
+          + 2*electricCharge_*sinCosField(site, 0+numGaugeCpts)*field(site, 3)*field(site+0, 4)
+          + 2*electricCharge_*sinCosField(site, 0)*field(site, 4)*field(site+0, 4);
         break;
       case 1:
         grad = -BxShiftZ + Bx + field(site-0, 0) - field(site-0+1, 0) - field(site, 0) + field(site+1, 0)
           - field(site-0, 1) - field(site-2, 1) + 4*field(site, 1) - field(site+2, 1)
           - field(site+0, 1) + field(site-2, 2) - field(site, 2) - field(site+1-2, 2)
           + field(site+1, 2)
-          + 2*electricCharge_*sinCosField->operator()(site, 1)*field(site, 3)*field(site+1, 3)
-          - 2*electricCharge_*sinCosField->operator()(site, 1+numGaugeCpts)*field(site+1, 3)*field(site, 4)
-          + 2*electricCharge_*sinCosField->operator()(site, 1+numGaugeCpts)*field(site, 3)*field(site+1, 4)
-          + 2*electricCharge_*sinCosField->operator()(site, 1)*field(site, 4)*field(site+1, 4);
+          + 2*electricCharge_*sinCosField(site, 1)*field(site, 3)*field(site+1, 3)
+          - 2*electricCharge_*sinCosField(site, 1+numGaugeCpts)*field(site+1, 3)*field(site, 4)
+          + 2*electricCharge_*sinCosField(site, 1+numGaugeCpts)*field(site, 3)*field(site+1, 4)
+          + 2*electricCharge_*sinCosField(site, 1)*field(site, 4)*field(site+1, 4);
         break;
       case 2:
         grad = BxShiftY - Bx + field(site-0, 0) - field(site-0+2, 0) - field(site, 0) + field(site+2, 0)
           + field(site-1, 1) - field(site-1+2, 1) - field(site, 1) + field(site+2, 1)
           - field(site-0, 2) - field(site-1, 2) + 4*field(site, 2) - field(site+1, 2)
           - field(site+0, 2)
-          + 2*electricCharge_*sinCosField->operator()(site, 2)*field(site, 3)*field(site+2, 3)
-          - 2*electricCharge_*sinCosField->operator()(site, 2+numGaugeCpts)*field(site+2, 3)*field(site, 4)
-          + 2*electricCharge_*sinCosField->operator()(site, 2+numGaugeCpts)*field(site, 3)*field(site+2, 4)
-          + 2*electricCharge_*sinCosField->operator()(site, 2)*field(site, 4)*field(site+2, 4);
+          + 2*electricCharge_*sinCosField(site, 2)*field(site, 3)*field(site+2, 3)
+          - 2*electricCharge_*sinCosField(site, 2+numGaugeCpts)*field(site+2, 3)*field(site, 4)
+          + 2*electricCharge_*sinCosField(site, 2+numGaugeCpts)*field(site, 3)*field(site+2, 4)
+          + 2*electricCharge_*sinCosField(site, 2)*field(site, 4)*field(site+2, 4);
         break;
       case 3:
-        grad = -2*(sinCosField->operator()(site-0, 0+numGaugeCpts)*field(site-0, 3) + sinCosField->operator()(site-1, 1+numGaugeCpts)*field(site-1, 3)
-          + sinCosField->operator()(site-2, 2+numGaugeCpts)*field(site-2, 3) - 6*field(site,3)
+        grad = -2*(sinCosField(site-0, 0+numGaugeCpts)*field(site-0, 3) + sinCosField(site-1, 1+numGaugeCpts)*field(site-1, 3)
+          + sinCosField(site-2, 2+numGaugeCpts)*field(site-2, 3) - 6*field(site,3)
           + 2*selfCoupling_*pow(vev_,2)*field(site, 3) - 2*selfCoupling_*pow(field(site,3),3)
-          + sinCosField->operator()(site, 2+numGaugeCpts)*field(site+2, 3) + sinCosField->operator()(site,1+numGaugeCpts)*field(site+1, 3)
-          + sinCosField->operator()(site, 0+numGaugeCpts)*field(site+0, 3) + sinCosField->operator()(site-0, 0)*field(site-0, 4)
-          + sinCosField->operator()(site-1, 1)*field(site-1, 4) + sinCosField->operator()(site-2, 2)*field(site-2, 4)
-          - 2*selfCoupling_*field(site,3)*pow(field(site, 4),2) - sinCosField->operator()(site, 2)*field(site+2, 4)
-          -sinCosField->operator()(site, 1)*field(site+1, 4) - sinCosField->operator()(site, 0)*field(site+0, 4));
+          + sinCosField(site, 2+numGaugeCpts)*field(site+2, 3) + sinCosField(site,1+numGaugeCpts)*field(site+1, 3)
+          + sinCosField(site, 0+numGaugeCpts)*field(site+0, 3) + sinCosField(site-0, 0)*field(site-0, 4)
+          + sinCosField(site-1, 1)*field(site-1, 4) + sinCosField(site-2, 2)*field(site-2, 4)
+          - 2*selfCoupling_*field(site,3)*pow(field(site, 4),2) - sinCosField(site, 2)*field(site+2, 4)
+          -sinCosField(site, 1)*field(site+1, 4) - sinCosField(site, 0)*field(site+0, 4));
         break;
       case 4:  
-        grad = 2*(sinCosField->operator()(site-0, 0)*field(site-0, 3) + sinCosField->operator()(site-1, 1)*field(site-1, 3)
-          + sinCosField->operator()(site-2, 2)*field(site-2, 3) - sinCosField->operator()(site, 2)*field(site+2, 3)
-          - sinCosField->operator()(site, 1)*field(site+1, 3) - sinCosField->operator()(site, 0)*field(site+0, 3)
-          - sinCosField->operator()(site-0, 0+numGaugeCpts)*field(site-0, 4) - sinCosField->operator()(site-1, 1+numGaugeCpts)*field(site-1, 4)
-          - sinCosField->operator()(site-2, 2+numGaugeCpts)*field(site-2, 4) + 6*field(site, 4)
+        grad = 2*(sinCosField(site-0, 0)*field(site-0, 3) + sinCosField(site-1, 1)*field(site-1, 3)
+          + sinCosField(site-2, 2)*field(site-2, 3) - sinCosField(site, 2)*field(site+2, 3)
+          - sinCosField(site, 1)*field(site+1, 3) - sinCosField(site, 0)*field(site+0, 3)
+          - sinCosField(site-0, 0+numGaugeCpts)*field(site-0, 4) - sinCosField(site-1, 1+numGaugeCpts)*field(site-1, 4)
+          - sinCosField(site-2, 2+numGaugeCpts)*field(site-2, 4) + 6*field(site, 4)
           - 2*selfCoupling_*pow(vev_,2)*field(site, 4) + 2*selfCoupling_*pow(field(site, 3),2)*field(site, 4)
-          + 2*selfCoupling_*pow(field(site, 4),3) - sinCosField->operator()(site, 2+numGaugeCpts)*field(site+2, 4)
-          - sinCosField->operator()(site, 1+numGaugeCpts)*field(site+1, 4) - sinCosField->operator()(site, 0+numGaugeCpts)*field(site+0,4));
+          + 2*selfCoupling_*pow(field(site, 4),3) - sinCosField(site, 2+numGaugeCpts)*field(site+2, 4)
+          - sinCosField(site, 1+numGaugeCpts)*field(site+1, 4) - sinCosField(site, 0+numGaugeCpts)*field(site+0,4));
         break;
     }
     return grad;

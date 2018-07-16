@@ -11,7 +11,6 @@ namespace monsta
   public:
     Theory();
 
-    // virtual bool validateField(LATfield2::Field<double> &field) const = 0;
     double computeEnergy(LATfield2::Field<double> &field) const;
     void updateGradient(LATfield2::Field<double> &field) const;
     double updateGradientReturnMax(LATfield2::Field<double> &field) const;
@@ -26,24 +25,30 @@ namespace monsta
     int numPrecomputedCpts_ = 1;
 
     virtual double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site,
-      LATfield2::Field<double> *precomputedValues = NULL) const = 0;
+      LATfield2::Field<double> &precomputedValues) const = 0;
     virtual double getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt,
-      LATfield2::Field<double> *precomputedValues = NULL) const = 0;
-    virtual void generatePrecomputedValues(LATfield2::Field<double> &field, LATfield2::Field<double> &destinationField) const;
+      LATfield2::Field<double> &precomputedValues) const = 0;
+    virtual void generatePrecomputedValues(LATfield2::Field<double> &field,
+      LATfield2::Field<double> &destinationField) const;
   };
 
   Theory::Theory() {}
 
   double Theory::computeEnergy(LATfield2::Field<double> &field) const
   {
-    LATfield2::Site site(field.lattice());
+    LATfield2::Lattice &lattice = field.lattice();
+    LATfield2::Site site(lattice);
+
+    LATfield2::Field<double> precomputedValues(lattice, numPrecomputedCpts_);
+    generatePrecomputedValues(field, precomputedValues);
 
     double E = 0;
     for (site.first(); site.test(); site.next())
     {
-      E += getLocalEnergyDensity(field, site);
+      E += getLocalEnergyDensity(field, site, precomputedValues);
     }
 
+    parallel.sum(E);
     return E;
   }
 
@@ -59,7 +64,7 @@ namespace monsta
     {
       for (int iCpt = 0; iCpt < numSpatialCpts_; iCpt++)
       {
-        field(site, iCpt + numSpatialCpts_) = getLocalGradient(field, site, iCpt, &precomputedValues);
+        field(site, iCpt + numSpatialCpts_) = getLocalGradient(field, site, iCpt, precomputedValues);
       }
     }
   }
@@ -78,12 +83,13 @@ namespace monsta
     {
       for (int iCpt = 0; iCpt < numSpatialCpts_; iCpt++)
       {
-        localGradient = getLocalGradient(field, site, iCpt, &precomputedValues);
+        localGradient = getLocalGradient(field, site, iCpt, precomputedValues);
         field(site, iCpt + numSpatialCpts_) = localGradient;
         if (abs(localGradient) > abs(maxGrad)) { maxGrad = localGradient; }
       }
     }
 
+    parallel.max(maxGrad);
     return maxGrad;
   }
 
@@ -100,13 +106,12 @@ namespace monsta
     LATfield2::Field<double> precomputedValues(lattice, numPrecomputedCpts_);
     generatePrecomputedValues(field, precomputedValues);
 
-
     for (site.first(); site.test(); site.next())
     {
       for (int iCpt = 0; iCpt < numSpatialCpts_; iCpt++)
       {
         localGradientOld = field(site, iCpt + numSpatialCpts_);
-        localGradient = getLocalGradient(field, site, iCpt, &precomputedValues);
+        localGradient = getLocalGradient(field, site, iCpt, precomputedValues);
 
         field(site, iCpt + numSpatialCpts_) = localGradient;
 
@@ -115,11 +120,13 @@ namespace monsta
       }
     }
 
+    parallel.sum(stepChangeNumerator);
+    parallel.sum(stepChangeDenominator);
     return stepChangeNumerator / stepChangeDenominator;
   }
 
   void Theory::generatePrecomputedValues(LATfield2::Field<double> &field,
-    LATfield2::Field<double> &destinationField) const {}
+    LATfield2::Field<double> &destinationField) const {};
 }
 
 

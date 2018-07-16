@@ -17,8 +17,10 @@ namespace monsta
     int *southPos_;
     int *northPos_;
 
-    double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site) const;
-    double getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt) const;
+    double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site,
+      LATfield2::Field<double> &precomputedValues) const;
+    double getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site,
+      int cpt, LATfield2::Field<double> &precomputedValues) const;
   };
 
   FreeMonopoleTheory::FreeMonopoleTheory(double magneticCharge, int *southPos, int *northPos)
@@ -31,7 +33,8 @@ namespace monsta
     }
   }
 
-  double FreeMonopoleTheory::getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site) const
+  double FreeMonopoleTheory::getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site,
+    LATfield2::Field<double> &precomputedValues) const
   {
     int xCoord = site.coord(0);
     int yCoord = site.coord(1);
@@ -49,7 +52,8 @@ namespace monsta
     return 0.5*E;
   }
 
-  double FreeMonopoleTheory::getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt) const
+  double FreeMonopoleTheory::getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site,
+    int cpt, LATfield2::Field<double> &precomputedValues) const
   {
     int xCoord = site.coord(0);
     int yCoord = site.coord(1);
