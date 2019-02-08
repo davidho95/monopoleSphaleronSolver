@@ -116,37 +116,37 @@ namespace monsta {
       monsta::Matrix gaugeMat = vecToSu2(field, site, vectorCpt);
       LATfield2::Site shiftedSite = site+vectorCpt;
       monsta::Matrix scalarMatShiftedFwd = vecToLieAlg(field, shiftedSite, 3);
-      // // Derivative of Wilson action
-      // int dir1 = (vectorCpt + 1) % numDimensions;
-      // int dir2 = (vectorCpt + 2) % numDimensions;
+      // Derivative of Wilson action
+      int dir1 = (vectorCpt + 1) % numDimensions;
+      int dir2 = (vectorCpt + 2) % numDimensions;
 
-      // int derivIdx = site.index();
+      int derivIdx = site.index();
 
-      // grad += real(trace(getPlaquetteDeriv(field, site, vectorCpt, dir1, derivIdx, vectorCpt, spatialCpt)));
-      // grad += real(trace(getPlaquetteDeriv(field, site, dir2, vectorCpt, derivIdx, vectorCpt, spatialCpt)));
-      // LATfield2::Site tempSite(site);
-      // tempSite = tempSite-dir1;
-      // grad += real(trace(getPlaquetteDeriv(field, tempSite, vectorCpt, dir1, derivIdx, vectorCpt, spatialCpt)));
-      // tempSite = tempSite+dir1-dir2;
-      // grad += real(trace(getPlaquetteDeriv(field, tempSite, dir2, vectorCpt, derivIdx, vectorCpt, spatialCpt)));
+      grad += real(trace(getPlaquetteDeriv(field, site, vectorCpt, dir1, derivIdx, vectorCpt, spatialCpt)));
+      grad += real(trace(getPlaquetteDeriv(field, site, dir2, vectorCpt, derivIdx, vectorCpt, spatialCpt)));
+      LATfield2::Site tempSite(site);
+      tempSite = tempSite-dir1;
+      grad += real(trace(getPlaquetteDeriv(field, tempSite, vectorCpt, dir1, derivIdx, vectorCpt, spatialCpt)));
+      tempSite = tempSite+dir1-dir2;
+      grad += real(trace(getPlaquetteDeriv(field, tempSite, dir2, vectorCpt, derivIdx, vectorCpt, spatialCpt)));
 
-      // grad = -2/gaugeCoupling_*grad;
+      grad = -2/gaugeCoupling_*grad;
 
-      // // // Derivative of kinetic term
-      // grad -= 4*real(trace(scalarMat*getSu2Deriv(gaugeMat, spatialCpt)*scalarMatShiftedFwd*conjugateTranspose(gaugeMat)));
+      // // Derivative of kinetic term
+      grad -= 4*real(trace(scalarMat*getSu2Deriv(gaugeMat, spatialCpt)*scalarMatShiftedFwd*conjugateTranspose(gaugeMat)));
 
     } else {
       int xCoord = site.coord(0);
       int yCoord = site.coord(1);
       int zCoord = site.coord(2);
 
-      // if (xCoord == monopolePos1_[0] && yCoord == monopolePos1_[1] && zCoord == monopolePos1_[2])
-      // {
-      //   return 0;
-      // } else if (xCoord == monopolePos2_[0] && yCoord == monopolePos2_[1] && zCoord == monopolePos2_[2])
-      // {
-      //   return 0;
-      // }
+      if (xCoord == monopolePos1_[0] && yCoord == monopolePos1_[1] && zCoord == monopolePos1_[2])
+      {
+        return 0;
+      } else if (xCoord == monopolePos2_[0] && yCoord == monopolePos2_[1] && zCoord == monopolePos2_[2])
+      {
+        return 0;
+      }
       
       switch (spatialCpt)
       {
