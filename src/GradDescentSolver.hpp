@@ -37,19 +37,19 @@ namespace monsta
       iterate(system);
       if (isVerbose_)
       {
-        std::cout << maxGrad_ << std::endl;
+        COUT << maxGrad_ << std::endl;
       }
     }
 
     double finalEnergy = system.getEnergy();
 
     if (numIters < maxIterations_) {
-      std::cout << "Gradient descent finished in " << numIters << " iterations." << std::endl;
-      std::cout << "Minimum energy: " << finalEnergy << std::endl;
+      COUT << "Gradient descent finished in " << numIters << " iterations." << std::endl;
+      COUT << "Minimum energy: " << finalEnergy << std::endl;
     } else {
-      std::cout << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
-      // std::cout << "Maximum gradient: " << maxGrad_ << std::endl;
-      std::cout << "Energy reached: " << finalEnergy << std::endl;
+      COUT << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
+      // COUT << "Maximum gradient: " << maxGrad_ << std::endl;
+      COUT << "Energy reached: " << finalEnergy << std::endl;
     }
   }
 
