@@ -11,7 +11,9 @@ namespace monsta {
   class GeorgiGlashowSu2Theory: public Theory {
   public:
     GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling);
+    GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, bool skipScalar);
     GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, int *monopolePos1, int *monopolePos2);
+    GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, int* monopolePos1, int*monopolePos2, bool skipScalar);
     int getScalarFieldStart();
 
     double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site,
@@ -39,6 +41,7 @@ namespace monsta {
     int *monopolePos2_;
     int *monopolePos1_;
     bool noMonopoles_ = true;
+    bool skipScalar_ = false;
 
     int scalarFieldStart_ = 9;
 
@@ -48,6 +51,25 @@ namespace monsta {
     monsta::Matrix pauli2_;
     monsta::Matrix pauli3_;
   };
+
+    GeorgiGlashowSu2Theory::GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, int* monopolePos1, int*monopolePos2, bool skipScalar)
+  : Theory(), gaugeCoupling_(gaugeCoupling), vev_(vev), selfCoupling_(selfCoupling), monopolePos1_(monopolePos1), monopolePos2_(monopolePos2),
+    identity_(2), pauli1_(2), pauli2_(2), pauli3_(2), noMonopoles_(false), skipScalar_(skipScalar)
+  {
+    setNumSpatialCpts(12);  // 3 x 3 gauge field, 3 scalar
+
+    identity_(0,0) = 1;
+    identity_(1,1) = 1;
+
+    pauli1_(0,1) = 1;
+    pauli1_(1,0) = 1;
+
+    pauli2_(0,1) = -1i;
+    pauli2_(1,0) = 1i;
+
+    pauli3_(0,0) = 1;
+    pauli3_(1,1) = -1;
+  }
 
   GeorgiGlashowSu2Theory::GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, int* monopolePos1, int*monopolePos2)
   : Theory(), gaugeCoupling_(gaugeCoupling), vev_(vev), selfCoupling_(selfCoupling), monopolePos1_(monopolePos1), monopolePos2_(monopolePos2),
@@ -87,6 +109,25 @@ namespace monsta {
     pauli3_(1,1) = -1;
   }
 
+  GeorgiGlashowSu2Theory::GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, bool skipScalar)
+  : Theory(), gaugeCoupling_(gaugeCoupling), vev_(vev), selfCoupling_(selfCoupling), skipScalar_(skipScalar),
+    identity_(2), pauli1_(2), pauli2_(2), pauli3_(2)
+  {
+    setNumSpatialCpts(12);  // 3 x 3 gauge field, 3 scalar
+
+    identity_(0,0) = 1;
+    identity_(1,1) = 1;
+
+    pauli1_(0,1) = 1;
+    pauli1_(1,0) = 1;
+
+    pauli2_(0,1) = -1i;
+    pauli2_(1,0) = 1i;
+
+    pauli3_(0,0) = 1;
+    pauli3_(1,1) = -1;
+  }
+
   int GeorgiGlashowSu2Theory::getScalarFieldStart()
   {
     return scalarFieldStart_;
@@ -109,7 +150,7 @@ namespace monsta {
     // Covariant Derivative
     for (int ii = 0; ii < numDimensions; ii++)
     {
-      E += 2*real(trace(getKineticTerm(field, site, ii)));
+      E += real(trace(getKineticTerm(field, site, ii)));
     }
 
     // Higgs Potential
@@ -161,6 +202,7 @@ namespace monsta {
       grad -= 4*real(trace(scalarMat*getSu2Deriv(field, site, vectorCpt, spatialCpt)*scalarMatShiftedFwd*conjugateTranspose(gaugeMat)));
 
     } else {
+      if (skipScalar_) { return 0; }
       int xCoord = site.coord(0);
       int yCoord = site.coord(1);
       int zCoord = site.coord(2);
@@ -189,11 +231,11 @@ namespace monsta {
             break;
         }
 
+      // Derivative of kinetic term
       grad += 12*field(site, cpt);     
 
       for (int ii = 0; ii < 3; ii++)
       {
-        // Derivative of kinetic term
         monsta::Matrix gaugeMat = vecToSu2(field, site, ii);
         LATfield2::Site shiftedSite = site+ii;
         monsta::Matrix scalarMatShiftedFwd = vecToLieAlg(field, shiftedSite, 3);
@@ -335,7 +377,8 @@ namespace monsta {
     monsta::Matrix scalarMatShifted = vecToLieAlg(field, shiftedSite, 3);
     monsta::Matrix gaugeMat = vecToSu2(field, site, dir);
 
-    return 0.5*(scalarMat*scalarMat + scalarMatShifted*scalarMatShifted - 2*scalarMat*gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat));
+    return (gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat) - scalarMat)*(gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat) - scalarMat);
+    // return 0.5*(scalarMat*scalarMat + scalarMatShifted*scalarMatShifted - 2*scalarMat*gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat));
 
   }
 
@@ -344,11 +387,11 @@ namespace monsta {
     LATfield2::Site tempSite(site);
     monsta::Matrix plaquette = vecToSu2(field, site, dir1, twist);
     tempSite = tempSite+dir1;
-    plaquette = vecToSu2(field, tempSite, dir2, twist)*plaquette;
+    plaquette = plaquette*vecToSu2(field, tempSite, dir2, twist);
     tempSite = tempSite-dir1+dir2;
-    plaquette = conjugateTranspose(vecToSu2(field, tempSite, dir1, twist))*plaquette;
+    plaquette = plaquette*conjugateTranspose(vecToSu2(field, tempSite, dir1, twist));
     tempSite = tempSite-dir2;
-    plaquette = conjugateTranspose(vecToSu2(field, tempSite, dir2, twist))*plaquette;
+    plaquette = plaquette*conjugateTranspose(vecToSu2(field, tempSite, dir2, twist));
 
     return plaquette;
   }
@@ -362,31 +405,31 @@ namespace monsta {
     monsta::Matrix plaquetteDeriv = identity_;
     if (tempSite.index() == derivIdx && derivDir == dir1)
     {
-      plaquetteDeriv = getSu2Deriv(field, tempSite, dir1, derivCpt, twist)*plaquetteDeriv;
+      plaquetteDeriv = plaquetteDeriv*getSu2Deriv(field, tempSite, dir1, derivCpt, twist);
     } else {
-      plaquetteDeriv = vecToSu2(field, tempSite, dir1, twist)*plaquetteDeriv;
+      plaquetteDeriv = plaquetteDeriv*vecToSu2(field, tempSite, dir1, twist);
     }
     tempSite = tempSite+dir1;
     if (tempSite.index() == derivIdx && derivDir == dir2)
     {
-      plaquetteDeriv = getSu2Deriv(field, tempSite, dir2, derivCpt, twist)*plaquetteDeriv;
+      plaquetteDeriv = plaquetteDeriv*getSu2Deriv(field, tempSite, dir2, derivCpt, twist);
     } else {
-      plaquetteDeriv = vecToSu2(field, tempSite, dir2, twist)*plaquetteDeriv;
+      plaquetteDeriv = plaquetteDeriv*vecToSu2(field, tempSite, dir2, twist);
     }
     tempSite = tempSite-dir1;
     tempSite = tempSite+dir2;
     if (tempSite.index() == derivIdx && derivDir == dir1)
     {
-      plaquetteDeriv = conjugateTranspose(getSu2Deriv(field, tempSite, dir1, derivCpt, twist))*plaquetteDeriv;
+      plaquetteDeriv = plaquetteDeriv*conjugateTranspose(getSu2Deriv(field, tempSite, dir1, derivCpt, twist));
     } else {
-      plaquetteDeriv = conjugateTranspose(vecToSu2(field, tempSite, dir1, twist))*plaquetteDeriv;
+      plaquetteDeriv = plaquetteDeriv*conjugateTranspose(vecToSu2(field, tempSite, dir1, twist));
     }
     tempSite = tempSite-dir2;
     if (tempSite.index() == derivIdx && derivDir == dir2)
     {
-      plaquetteDeriv = conjugateTranspose(getSu2Deriv(field, tempSite, dir2, derivCpt, twist))*plaquetteDeriv;
+      plaquetteDeriv = plaquetteDeriv*conjugateTranspose(getSu2Deriv(field, tempSite, dir2, derivCpt, twist));
     } else {
-      plaquetteDeriv = conjugateTranspose(vecToSu2(field, tempSite, dir2, twist))*plaquetteDeriv;
+      plaquetteDeriv = plaquetteDeriv*conjugateTranspose(vecToSu2(field, tempSite, dir2, twist));
     }
     return plaquetteDeriv;
   }
@@ -417,11 +460,11 @@ namespace monsta {
     LATfield2::Site tempSite(site);
     monsta::Matrix u1Plaquette = getU1Projection(field, site, dir1);
     tempSite = tempSite+dir1;
-    u1Plaquette = getU1Projection(field, tempSite, dir2)*u1Plaquette;
+    u1Plaquette = u1Plaquette*getU1Projection(field, tempSite, dir2);
     tempSite = tempSite-dir1+dir2;
-    u1Plaquette = conjugateTranspose(getU1Projection(field, tempSite, dir1))*u1Plaquette;
+    u1Plaquette = u1Plaquette*conjugateTranspose(getU1Projection(field, tempSite, dir1));
     tempSite = tempSite-dir2;
-    u1Plaquette = conjugateTranspose(getU1Projection(field, tempSite, dir2))*u1Plaquette;
+    u1Plaquette = u1Plaquette*conjugateTranspose(getU1Projection(field, tempSite, dir2));
     return u1Plaquette;
   }
 
@@ -430,7 +473,7 @@ namespace monsta {
     int dir1 = (cpt + 1) % 3;
     int dir2 = (cpt + 2) % 3;
 
-    return arg(trace(getU1Plaquette(field, site, dir1, dir2)));
+    return 2./gaugeCoupling_*arg(trace(getU1Plaquette(field, site, dir1, dir2)));
   }
 
 }
