@@ -5,7 +5,12 @@ namespace monsta {
   class TheoryChecker {
   public:
     TheoryChecker(double tol, bool verbose = true)
-    : tol_(tol), verbose_(verbose) {}
+    : tol_(tol), verbose_(verbose) {
+      if (parallel.size() != 1)
+      {
+        throw std::runtime_error("Gradient checker will not perform correctly with multiple processors.");
+      }
+    }
 
     bool checkGradients(monsta::Theory &theory, LATfield2::Field< std::complex<double> > &field) const
     {

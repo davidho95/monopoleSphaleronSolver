@@ -2,6 +2,7 @@
 #define THEORY_HPP
 
 #include "LATfield2.hpp"
+#include "./Matrix.hpp"
 #include <cmath>
 
 namespace monsta
@@ -9,83 +10,85 @@ namespace monsta
   class Theory
   {
   public:
-    Theory();
+    Theory(int numFieldMatrices, int numRows, int numCols);
 
-    double computeEnergy(LATfield2::Field<double> &field) const;
-    void updateGradient(LATfield2::Field<double> &field) const;
-    double updateGradientReturnMax(LATfield2::Field<double> &field) const;
-    double updateGradientReturnStepChange(LATfield2::Field<double> &field) const;
-    int getNumSpatialCpts() const { return numSpatialCpts_; }
-    void setNumSpatialCpts(int numSpatialCpts) { numSpatialCpts_ = numSpatialCpts; }
-    void setNumPrecomputedCpts(int numPrecomputedCpts) { numPrecomputedCpts_ = numPrecomputedCpts; }
-
+    double computeEnergy(LATfield2::Field< std::complex<double> > &field) const;
+    void updateGradient(LATfield2::Field< std::complex<double> > &field) const;
+    std::complex<double> updateGradientReturnMax(LATfield2::Field< std::complex<double> > &field) const;
+    double updateGradientReturnStepChange(LATfield2::Field< std::complex<double> > &field) const;
+    int getnumFieldMatrices() const { return numFieldMatrices_; }
+    int getNumRows() const { return numRows_; }
+    virtual void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const { field.updateHalo(); }
+    virtual double getLocalEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const = 0;
+    virtual std::complex<double> getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx, int rowIdx, int colIdx) const = 0;
+    virtual monsta::Matrix getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const = 0;
+    virtual void postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const = 0;
 
   protected:
-    int numSpatialCpts_ = 1;
-    int numPrecomputedCpts_ = 1;
+    int numFieldMatrices_ = 1;
+    int numRows_ = 1;
+    int numCols_ = 1;
 
-    virtual double getLocalEnergyDensity(LATfield2::Field<double> &field, LATfield2::Site &site,
-      LATfield2::Field<double> &precomputedValues) const = 0;
-    virtual double getLocalGradient(LATfield2::Field<double> &field, LATfield2::Site &site, int cpt,
-      LATfield2::Field<double> &precomputedValues) const = 0;
-    virtual void generatePrecomputedValues(LATfield2::Field<double> &field,
-      LATfield2::Field<double> &destinationField) const;
   };
 
-  Theory::Theory() {}
+  Theory::Theory(int numFieldMatrices, int numRows, int numCols) : numFieldMatrices_(numFieldMatrices), numRows_(numRows), numCols_(numCols)
+  {}
 
-  double Theory::computeEnergy(LATfield2::Field<double> &field) const
+  double Theory::computeEnergy(LATfield2::Field< std::complex<double> > &field) const
   {
     LATfield2::Lattice &lattice = field.lattice();
     LATfield2::Site site(lattice);
 
-    LATfield2::Field<double> precomputedValues(lattice, numPrecomputedCpts_);
-    generatePrecomputedValues(field, precomputedValues);
-
     double E = 0;
     for (site.first(); site.test(); site.next())
     {
-      E += getLocalEnergyDensity(field, site, precomputedValues);
+      E += getLocalEnergyDensity(field, site);
     }
 
     parallel.sum(E);
     return E;
   }
 
-  void Theory::updateGradient(LATfield2::Field<double> &field) const
+  void Theory::updateGradient(LATfield2::Field< std::complex<double> > &field) const
   {
     LATfield2::Lattice &lattice = field.lattice();
     LATfield2::Site site(lattice);
 
-    LATfield2::Field<double> precomputedValues(lattice, numPrecomputedCpts_);
-    generatePrecomputedValues(field, precomputedValues);
-
     for (site.first(); site.test(); site.next())
     {
-      for (int iCpt = 0; iCpt < numSpatialCpts_; iCpt++)
+      for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++)
       {
-        field(site, iCpt + numSpatialCpts_) = getLocalGradient(field, site, iCpt, precomputedValues);
+        for (int rowIdx = 0; rowIdx < numRows_; rowIdx++)
+        {
+          for (int colIdx = 0; colIdx < numCols_; colIdx++)
+          {
+            field(site, matIdx + numFieldMatrices_, rowIdx, colIdx) = getLocalGradient(field, site, matIdx, rowIdx, colIdx);
+          }
+        }
       }
     }
   }
 
-  double Theory::updateGradientReturnMax(LATfield2::Field<double> &field) const
+  std::complex<double> Theory::updateGradientReturnMax(LATfield2::Field< std::complex<double> > &field) const
   {
     LATfield2::Lattice &lattice = field.lattice();
     LATfield2::Site site(lattice);
     double maxGrad = 0;
-    double localGradient;
-
-    LATfield2::Field<double> precomputedValues(lattice, numPrecomputedCpts_);
-    generatePrecomputedValues(field, precomputedValues);
+    std::complex<double> localGradient;
 
     for (site.first(); site.test(); site.next())
     {
-      for (int iCpt = 0; iCpt < numSpatialCpts_; iCpt++)
+      for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++)
       {
-        localGradient = getLocalGradient(field, site, iCpt, precomputedValues);
-        field(site, iCpt + numSpatialCpts_) = localGradient;
-        if (abs(localGradient) > abs(maxGrad)) { maxGrad = localGradient; }
+        for (int rowIdx = 0; rowIdx < numRows_; rowIdx++)
+        {
+          for (int colIdx = 0; colIdx < numCols_; colIdx++)
+          {
+            localGradient = getLocalGradient(field, site, matIdx, rowIdx, colIdx);
+            field(site, matIdx + numFieldMatrices_, rowIdx, colIdx) = localGradient;
+            if (abs(localGradient) > abs(maxGrad)) { maxGrad = abs(localGradient); }
+          }
+        }
       }
     }
 
@@ -93,30 +96,33 @@ namespace monsta
     return maxGrad;
   }
 
-  double Theory::updateGradientReturnStepChange(LATfield2::Field<double> &field) const
+  double Theory::updateGradientReturnStepChange(LATfield2::Field< std::complex<double> > &field) const
   {
     LATfield2::Lattice &lattice = field.lattice();
     LATfield2::Site site(lattice);
-    double localGradientOld;
-    double localGradient;
+    std::complex<double> localGradientOld;
+    std::complex<double> localGradient;
 
     double stepChangeNumerator = 0;
     double stepChangeDenominator = 0;
 
-    LATfield2::Field<double> precomputedValues(lattice, numPrecomputedCpts_);
-    generatePrecomputedValues(field, precomputedValues);
-
     for (site.first(); site.test(); site.next())
     {
-      for (int iCpt = 0; iCpt < numSpatialCpts_; iCpt++)
+      for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++)
       {
-        localGradientOld = field(site, iCpt + numSpatialCpts_);
-        localGradient = getLocalGradient(field, site, iCpt, precomputedValues);
+        for (int rowIdx = 0; rowIdx < numRows_; rowIdx++)
+        {
+          for (int colIdx = 0; colIdx < numCols_; colIdx++)
+          {
+            localGradientOld = field(site, matIdx + numFieldMatrices_, rowIdx, colIdx);
+            localGradient = getLocalGradient(field, site, matIdx, rowIdx, colIdx);
 
-        field(site, iCpt + numSpatialCpts_) = localGradient;
+            field(site, matIdx + numFieldMatrices_, rowIdx, colIdx) = localGradient;
 
-        stepChangeNumerator += localGradientOld * (localGradientOld - localGradient);
-        stepChangeDenominator += pow((localGradient - localGradientOld),2);
+            stepChangeNumerator += abs(localGradientOld * (localGradientOld - localGradient));
+            stepChangeDenominator += pow(abs((localGradient - localGradientOld)),2);
+          }
+        }
       }
     }
 
@@ -124,9 +130,6 @@ namespace monsta
     parallel.sum(stepChangeDenominator);
     return stepChangeNumerator / stepChangeDenominator;
   }
-
-  void Theory::generatePrecomputedValues(LATfield2::Field<double> &field,
-    LATfield2::Field<double> &destinationField) const {};
 }
 
 

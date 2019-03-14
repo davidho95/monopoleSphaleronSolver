@@ -7,12 +7,14 @@ namespace monsta
   {
   public:
     GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize);
+    GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
     void solve(monsta::Theory &theory, LATfield2::Field< std::complex<double> > &field);
 
     void setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize);
+    void setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
 
   private:
     double tol_;
@@ -24,6 +26,7 @@ namespace monsta
     double energy;
     double energyOld;
     bool isVerbose_ = true;
+    std::vector<int> skipCpts_;
     LATfield2::Field< std::complex<double> > oldGrads_;
 
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory);
@@ -31,6 +34,8 @@ namespace monsta
 
   GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize) {}
+  GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), skipCpts_(skipCpts) {}
 
   void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
@@ -38,6 +43,15 @@ namespace monsta
     maxIterations_ = maxIterations;
     stepSize_ = initialStepSize;
     maxStepSize_ = maxStepSize;
+  }
+
+  void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
+  {
+    tol_ = tol;
+    maxIterations_ = maxIterations;
+    stepSize_ = initialStepSize;
+    maxStepSize_ = maxStepSize;
+    skipCpts_ = skipCpts;
   }
 
   void GradDescentSolver::solve(monsta::Theory &theory, LATfield2::Field< std::complex<double> > &field)
@@ -103,6 +117,16 @@ namespace monsta
       for (int matIdx = 0; matIdx < numMatrices; matIdx++)
       {
         gradMat = theory.getLocalGradient(field, site, matIdx);
+        bool skip = false;
+        for (int ii = 0; ii < skipCpts_.size(); ii++)
+        {
+          if (matIdx == skipCpts_[ii])
+          { 
+            skip = true;
+            continue;
+          }
+        }
+        if (skip) { continue; }
         for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
         {
           for (int colIdx = 0; colIdx < numCols; colIdx++)
@@ -147,6 +171,16 @@ namespace monsta
       for (int matIdx = 0; matIdx < numMatrices; matIdx++)
       {
         gradMat = theory.getLocalGradient(field, site, matIdx);
+        bool skip = false;
+        for (int ii = 0; ii < skipCpts_.size(); ii++)
+        {
+          if (matIdx == skipCpts_[ii])
+          { 
+            skip = true;
+            continue;
+          }
+        }
+        if (skip) { continue; }
         for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
         {
           for (int colIdx = 0; colIdx < numCols; colIdx++)

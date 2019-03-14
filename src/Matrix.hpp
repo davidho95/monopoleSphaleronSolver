@@ -11,6 +11,8 @@ namespace monsta
   {
   public:
     Matrix(int size);
+    Matrix(std::vector< std::complex<double> > elements);
+    Matrix(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx);
 
     int getSize() const;
     std::complex<double> operator()(int vecIdx) const;
@@ -29,11 +31,34 @@ namespace monsta
     int computeVecIdx(int colIdx, int rowIdx) const;
   };
 
-  Matrix::Matrix(int size) : size_(size)
+  Matrix::Matrix(int size) : size_(size), elements_(size*size)
   {
     for (int ii = 0; ii < pow(size,2); ii++)
     {
-      elements_.push_back(0);
+      elements_[ii] = 0;
+    }
+  }
+
+  Matrix::Matrix(std::vector< std::complex<double> > elements)
+  {
+    double tol = 1e-15;
+    double size = sqrt(elements.size());
+    if (floor(size) - size > tol)
+    {
+      throw std::invalid_argument("Initialising vector must contain a square number of elements");
+    }
+    size_ = size;
+    elements_ = elements;
+  }
+
+  Matrix::Matrix(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx)
+  : size_(field.rows()), elements_(size_*size_)
+  {
+    for (int ii = 0; ii < pow(size_, 2); ii++)
+    { 
+      int rowIdx = ii / size_;
+      int colIdx = ii % size_;
+      elements_[ii] = field(site, matIdx, rowIdx, colIdx);
     }
   }
 
@@ -189,6 +214,7 @@ namespace monsta
   { 
     if (mat1.getSize() != mat2.getSize())
     {
+      // cout << mat1.getSize() << " " << mat2.getSize() << endl;
       throw std::invalid_argument("Only matrices of the same size can be subtracted");
     }
     int matSize = mat1.getSize();
@@ -211,7 +237,7 @@ namespace monsta
     return output;
   }
 
-  monsta::Matrix conjugateTranspose(const Matrix &mat)
+  Matrix conjugateTranspose(const Matrix &mat)
   {
     monsta::Matrix outputMat = mat;
     int matSize = mat.getSize();
@@ -223,9 +249,30 @@ namespace monsta
         outputMat(ii,jj) = conj(mat(jj,ii));
       }
     }
-
     return outputMat;
   }
+
+  Matrix transpose(const Matrix &mat)
+  {
+    monsta::Matrix outputMat = mat;
+    int matSize = mat.getSize();
+
+    for (int ii = 0; ii < matSize; ii++)
+    {
+      for (int jj = 0; jj < matSize; jj++)
+      {
+        outputMat(ii,jj) = mat(jj,ii);
+      }
+    }
+    return outputMat;
+  }
+
+  Matrix siteToMat(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx)
+  {
+    return Matrix(field, site, matIdx);
+
+  }
+
 }
 
 #endif
