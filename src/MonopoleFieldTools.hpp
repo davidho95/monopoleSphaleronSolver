@@ -247,7 +247,7 @@ namespace monsta
     theory.applyBoundaryConditions(field);
   }
 
-void addMagneticFieldUnitary(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory, double fieldVal, int dir)
+  void addMagneticFieldUnitary(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory, double fieldVal, int dir)
   {
     double vev = theory.getVev();
 
@@ -287,6 +287,117 @@ void addMagneticFieldUnitary(LATfield2::Field< std::complex<double> > &field, mo
       }
     }
     theory.applyBoundaryConditions(field);
+  }
+
+  void scaleUpField(LATfield2::Field< std::complex<double> > &smallField, LATfield2::Field< std::complex<double> > &bigField)
+  {
+    LATfield2::Site smallSite(smallField.lattice());
+    LATfield2::Site bigSite(bigField.lattice());
+
+    int scaleFactor = 2;
+
+    int smallSize = smallField.lattice().size(0);
+    for (bigSite.first(); bigSite.test(); bigSite.next())
+    {
+      int bigXCoord = bigSite.coord(0);
+      int bigYCoord = bigSite.coord(1);
+      int bigZCoord = bigSite.coord(2);
+
+      if (bigYCoord == smallSize*scaleFactor/2 + 1 && bigZCoord == smallSize*scaleFactor/2 + 1)
+      {
+        smallSite.setCoord(bigXCoord / scaleFactor + 1, bigYCoord / scaleFactor + 1, bigZCoord / scaleFactor + 1);
+      }
+      else
+      {
+        smallSite.setCoord(bigXCoord / scaleFactor, bigYCoord / scaleFactor, bigZCoord / scaleFactor);
+      }
+
+      for (int ii = 0; ii < bigField.components(); ii++)
+      {
+        bigField(bigSite, ii) = smallField(smallSite, ii);
+      }
+    }
+  }
+
+  void transplantMonopole(LATfield2::Field< std::complex<double> > &smallField, LATfield2::Field< std::complex<double> > &bigField)
+  {
+    LATfield2::Site smallSite(smallField.lattice());
+    LATfield2::Site bigSite(bigField.lattice());
+
+    int scaleFactor = 2;
+
+    int smallSize = smallField.lattice().size(0);
+
+    // for (smallSite.first(); smallSite.test(); smallSite.next())
+    // {
+    //   int smallXCoord = smallSite.coord(0);
+    //   int smallYCoord = smallSite.coord(1);
+    //   int smallZCoord = smallSite.coord(2);
+
+    //   int bigXCoord;
+    //   if (smallXCoord < smallSize / 2)
+    //   {
+    //     bigXCoord = smallXCoord;
+    //   }
+    //   else
+    //   {
+    //     bigXCoord = smallXCoord + smallSize;
+    //   }
+    //   int bigYCoord = smallYCoord + smallSize / 2;
+    //   int bigZCoord = smallZCoord + smallSize / 2;
+
+    //   bigSite.setCoord(bigXCoord, bigYCoord, bigZCoord);
+    //   for (int ii = 0; ii < bigField.components(); ii++)
+    //   {
+    //     bigField(bigSite, ii) = smallField(smallSite, ii);
+    //   }
+    // }
+
+    for (bigSite.first(); bigSite.test(); bigSite.next())
+    {
+      int bigXCoord = bigSite.coord(0);
+      int bigYCoord = bigSite.coord(1);
+      int bigZCoord = bigSite.coord(2);
+
+      int smallXCoord, smallYCoord, smallZCoord;
+      if (bigXCoord < smallSize / 2)
+      {
+        smallXCoord = bigXCoord; 
+      }
+      else if (bigXCoord > 3 * smallSize / 2)
+      {
+        smallXCoord = bigXCoord - (2*smallSize);
+      }
+      else
+      {
+        smallXCoord = 0;
+      }
+
+      if (bigYCoord - smallSize / 2 < 0 || bigYCoord - smallSize / 2 >= smallSize)
+      {
+        smallYCoord = bigYCoord - smallSize / 2;
+      }
+      else
+      {
+        smallYCoord = 0;
+      }
+
+      if (bigZCoord - smallSize / 2 < 0 || bigZCoord - smallSize / 2 >= smallSize)
+      {
+        smallZCoord = bigZCoord - smallSize / 2;
+      }
+      else
+      {
+        smallZCoord = 0;
+      }
+
+      smallSite.setCoord(smallXCoord, smallYCoord, smallZCoord);
+
+      for (int ii = 0; ii < bigField.components(); ii++)
+      {
+        bigField(bigSite, ii) = smallField(smallSite, ii);
+      }
+    }
   }
 }
 

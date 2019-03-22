@@ -11,13 +11,13 @@
 
 namespace monsta
 {
-  void mergeFiles(std::string fileBaseName)
+  void mergeFiles(std::string fileBaseName, int numFiles)
   {
-    if (parallel.size() == 1) { return; }
+    // if (parallel.size() == 1) { return; }
     parallel.barrier();
     ofstream fileStream;
     fileStream.open(fileBaseName + ".txt");
-    for (int ii = 0; ii < parallel.size(); ii++)
+    for (int ii = 0; ii < numFiles; ii++)
     {
       ifstream fileToMerge;
       std::string fileToMergeName = fileBaseName + std::to_string(ii) + ".txt";
