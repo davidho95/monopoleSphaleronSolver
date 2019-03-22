@@ -70,7 +70,7 @@ int main(int argc, char **argv)
     double r = sqrt(pow(xCoord - sz/2, 2) + pow(yCoord - sz/2, 2) + pow(zCoord - sz/2, 2));
     for (int ii = 0; ii < numMatrices - 1; ii++)
     {
-      monsta::Matrix su2Mat = monsta::vecToSu2({0, 0.001, 0.01});
+      monsta::Matrix su2Mat = monsta::vecToSu2({0, 0.1, 0.2});
       field(site, ii, 0, 0) = su2Mat(0, 0);
       field(site, ii, 0, 1) = su2Mat(0, 1);
       field(site, ii, 1, 0) = su2Mat(1, 0);
@@ -94,18 +94,8 @@ int main(int argc, char **argv)
 
   double E = theory.computeEnergy(field);
 
-  int bigLatSize[dim] = {2*sz, 2*sz, 2*sz};
-  LATfield2::Lattice bigLattice(dim, bigLatSize, haloSize);
-  LATfield2::Field<complex<double> > bigField(bigLattice, numMatrices, numRows, numCols, 0);
-  monsta::transplantMonopole(field, bigField);
-  theory.applyBoundaryConditions(bigField);
-
-  // solver.solve(theory, bigField);
-
-  // cout << theory.computeEnergy(bigField) << endl;
-
-  monsta::writeCoords(bigField, outputPath + "/coords");
-  monsta::writeHiggsFieldUnitary(bigField, outputPath + "/higgsData");
-  monsta::writeMagneticField(bigField, outputPath + "/magneticFieldData", theory);
-  monsta::writeEnergyDensity(bigField, outputPath + "/energyData", theory);
+  monsta::writeCoords(field, outputPath + "/coords");
+  monsta::writeHiggsFieldUnitary(field, outputPath + "/higgsData");
+  monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
+  monsta::writeEnergyDensity(field, outputPath + "/energyData", theory);
 }
