@@ -1,6 +1,8 @@
 #ifndef GRADDESCENTSOLVER_HPP
 #define GRADDESCENTSOLVER_HPP
 
+#include <ctime>
+
 namespace monsta
 {
   class GradDescentSolver
@@ -95,6 +97,7 @@ namespace monsta
 
   void GradDescentSolver::iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory)
   {
+    clock_t begin = clock();
     LATfield2::Site site(field.lattice());
     int numRows = field.rows();
     int numCols = field.cols();
@@ -229,6 +232,9 @@ namespace monsta
     // double stepChange = system.updateGradientReturnStepChange();
     // stepSize_ *= stepChange;
     maxGrad_ = maxGrad;
+
+    clock_t end = clock();
+    // COUT << double(end - begin) / CLOCKS_PER_SEC << endl;
   }
 }
 

@@ -50,6 +50,13 @@ namespace monsta
     return true;
   }
 
+  void makeTraceless(monsta::Matrix &mat)
+  {
+    std::complex<double> tr = trace(mat);
+    mat(0,0) = mat(0,0) - 0.5*tr;
+    mat(1,1) = mat(1,1) - 0.5*tr;
+  }
+
   monsta::Matrix vecToSu2LieAlg(std::vector<double> vec)
   {
     return vec[0]*pauli1 + vec[1]*pauli2+vec[2]*pauli3;

@@ -172,6 +172,54 @@ namespace monsta
   theory.applyBoundaryConditions(pairField);
   }
 
+  void contractPair(LATfield2::Field< std::complex<double> > &pairField,
+    LATfield2::Field< std::complex<double> > &contractedField, monsta::Theory &theory)
+  {
+    LATfield2::Site siteFrom(pairField.lattice());
+    LATfield2::Site siteTo(contractedField.lattice());
+  for (siteTo.first(); siteTo.test(); siteTo.next())
+  {
+    int xCoord = siteTo.coord(0);
+    int yCoord = siteTo.coord(1);
+    int zCoord = siteTo.coord(2);
+
+    int xCoordFrom;
+    int xSize = pairField.lattice().size(0);
+    if (xCoord < xSize/2)
+    {
+      xCoordFrom = xCoord;
+    }
+    else if (xCoord < xSize - 1)
+    {
+      xCoordFrom = xCoord + 1;
+    }
+    else
+    {
+      xCoord = xCoord;
+    }
+
+    siteFrom.setCoord(xCoordFrom, yCoord, zCoord);
+
+    int numMatrices = 4;
+    {
+      for (int ii = 0; ii < numMatrices; ii++)
+      {
+        monsta::Matrix matrixTo(pairField, siteFrom, ii);
+        if (ii != 3)
+        {
+          matrixTo = monsta::pauli2*matrixTo*monsta::pauli2;
+        }
+        contractedField(siteTo, ii, 0, 0) = matrixTo(0, 0);
+        contractedField(siteTo, ii, 0, 1) = matrixTo(0, 1);
+        contractedField(siteTo, ii, 1, 0) = matrixTo(1, 0);
+        contractedField(siteTo, ii, 1, 1) = matrixTo(1, 1);
+      }
+    }
+  }
+  contractedField.updateHalo();
+  theory.applyBoundaryConditions(contractedField);
+  }
+
   void transferBoundary(LATfield2::Field< std::complex<double> > &inputField,
     LATfield2::Field< std::complex<double> > &outputField)
   {
