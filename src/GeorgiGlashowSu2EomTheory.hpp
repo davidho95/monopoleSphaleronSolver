@@ -155,8 +155,10 @@ namespace monsta {
             if (b == matIdx) { continue; }
             for (bool sgnB : {false, true})
             {
-              if (a == b && sgnA != sgnB) { continue; }
-              grad = grad + 2*2.0/pow(gaugeCoupling_,2)*getHinge1(field, site, matIdx, a, sgnA, b, sgnB);
+              // if (a == b && sgnA != sgnB) { continue; }
+              // cout << (sgnA ? "" : "-") << a << " " << (sgnB ? "" : "-") << b << endl;
+              grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge1(field, site, matIdx, a, sgnA, b, sgnB);
+              // getHinge1(field, site, matIdx, a, sgnA, b, sgnB).print();
             }
           }
         }
@@ -166,15 +168,18 @@ namespace monsta {
       {
         for (bool sgnA : {false, true})
         {
-          if (a == matIdx && !sgnA) { continue; }
+          // if (a == matIdx && !sgnA) { continue; }
           for (int b = 0; b < 3; b++)
           {
             if (b == matIdx) { continue; }
             if (b == a) { continue; }
             for (bool sgnB : {false, true})
             {
-              grad = grad + 2*2.0/pow(gaugeCoupling_,2)*getHinge2(field, site, matIdx, a, sgnA, b, sgnB);
-              grad = grad + 2*2.0/pow(gaugeCoupling_,2)*getHinge3(field, site, matIdx, a, sgnA, b, sgnB);
+              // cout << (sgnA ? "" : "-") << a << " " << (sgnB ? "" : "-") << b << endl;
+              grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge2(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge3(field, site, matIdx, a, sgnA, b, sgnB);
+              // getHinge2(field, site, matIdx, a, sgnA, b, sgnB).print();
+              // getHinge3(field, site, matIdx, a, sgnA, b, sgnB).print();
             }
           }
         }
@@ -442,15 +447,20 @@ namespace monsta {
     monsta::Matrix hinge = identity;
 
     hinge = hinge*getDirectedLink(field, site, dir2, isPos2);
+    // getDirectedLink(field, site, dir2, isPos2).print();
     tempSite = isPos2 ? tempSite + dir2 : tempSite - dir2;
     hinge = hinge*Matrix(field, tempSite, derivDir);
+    // Matrix(field, tempSite, derivDir).print();
     tempSite = tempSite + derivDir;
     hinge = hinge*getDirectedLink(field, tempSite, dir1, isPos1);
+    // getDirectedLink(field, tempSite, dir1, isPos1).print();
     tempSite = isPos1 ? tempSite + dir1 : tempSite - dir1;
     tempSite = isPos2 ? tempSite - dir2 : tempSite + dir2;
     hinge = hinge*conjugateTranspose(getDirectedLink(field, tempSite, dir2, isPos2));
+    // conjugateTranspose(getDirectedLink(field, tempSite, dir2, isPos2)).print();
     tempSite = isPos1 ? tempSite - dir1 : tempSite + dir1;
     hinge = hinge*conjugateTranspose(getDirectedLink(field, tempSite, dir1, isPos1));
+    // conjugateTranspose(getDirectedLink(field, tempSite, dir1, isPos1)).print();
 
     return hinge;
   }

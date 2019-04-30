@@ -82,27 +82,33 @@ namespace monsta {
 
       //Compute gradient numerically
       field(site,  matIdx, rowIdx, colIdx) = originalFieldVal + fdStep_;
-      field.updateHalo();
+      theory.applyBoundaryConditions(field);
+      theory.applyBoundaryConditions(field);
       double EPlus = theory.computeEnergy(field);
       field(site,  matIdx, rowIdx, colIdx) = originalFieldVal - fdStep_;
-      field.updateHalo();
+      theory.applyBoundaryConditions(field);
+      theory.applyBoundaryConditions(field);
       double EMinus = theory.computeEnergy(field);
 
       field(site,  matIdx, rowIdx, colIdx) = originalFieldVal;
-      field.updateHalo();
+      theory.applyBoundaryConditions(field);
+      theory.applyBoundaryConditions(field);
 
       double gradReal = (EPlus - EMinus) / (2*fdStep_);
 
       std::complex<double> imagStep(0, fdStep_);
       field(site,  matIdx, rowIdx, colIdx) = originalFieldVal + imagStep;
-      field.updateHalo();
+      theory.applyBoundaryConditions(field);
+      theory.applyBoundaryConditions(field);
       EPlus = theory.computeEnergy(field);
       field(site,  matIdx, rowIdx, colIdx) = originalFieldVal - imagStep;
-      field.updateHalo();
+      theory.applyBoundaryConditions(field);
+      theory.applyBoundaryConditions(field);
       EMinus = theory.computeEnergy(field);
 
       field(site,  matIdx, rowIdx, colIdx) = originalFieldVal;
-      field.updateHalo();
+      theory.applyBoundaryConditions(field);
+      theory.applyBoundaryConditions(field);
 
       double gradImag = (EPlus - EMinus) / (2*fdStep_);
 

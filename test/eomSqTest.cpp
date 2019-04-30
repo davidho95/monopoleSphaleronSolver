@@ -1,12 +1,10 @@
 #include "LATfield2.hpp"
 #include <complex>
-#include "../src/GeorgiGlashowSu2TheoryUnitaryOptimised.hpp"
+#include "../src/GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "../src/GeorgiGlashowSu2EomTheory.hpp"
 #include "../src/Matrix.hpp"
 #include "../src/GradDescentSolverBBStep.hpp"
 #include "../src/Su2Tools.hpp"
-#include "../src/MonopoleFileTools.hpp"
-#include "../src/MonopoleFieldTools.hpp"
 #include "../src/TheoryChecker.hpp"
 #include <iostream>
 #include <fstream>
@@ -71,7 +69,7 @@ int main(int argc, char **argv)
     double r = sqrt(pow(xCoord - sz/2, 2) + pow(yCoord - sz/2, 2) + pow(zCoord - sz/2, 2));
     for (int ii = 0; ii < numMatrices - 1; ii++)
     {
-      // monsta::Matrix su2Mat = monsta::vecToSu2({0, 0.001, 0.01});
+      // monsta::Matrix su2Mat = monsta::vecToSu2({0, 0, 0});
       monsta::Matrix su2Mat = monsta::vecToSu2({double(rand() % 10), double(rand() % 10), double(rand() % 10)});
       // monsta::Matrix su2Mat = monsta::vecToSu2({1, 1, 1});
       field(site, ii, 0, 0) = su2Mat(0, 0);
@@ -84,16 +82,16 @@ int main(int argc, char **argv)
     field(site, 3, 1, 0) = 0;
     field(site, 3, 1, 1) = 0;
   }
-  field.updateHalo();
-  field.updateHalo();
 
   double initialStep = 0.001;
   double maxStepSize = 0.05;
   double tol = 1e-6;
   int maxNumSteps = 10000;
 
-  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {1,1,1}, false);
-  monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {1,1,1}, false);
+  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {-1,-1,-1}, false);
+  monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {-1,-1,-1}, false);
+
+  eomTheory.applyBoundaryConditions(field);
 
   // monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
   // solver.setVerbosity(false);
@@ -105,6 +103,35 @@ int main(int argc, char **argv)
 
   // site.setCoord(0,0,0);
   // eomTheory.getHinge3(field, site, 0, 1, true, 1, false).print();
+
+  // eomTheory.getLocalGradient(field, site, 0);
+
+  int dir1 = 1;
+  int dir2 = 1;
+
+  // site.setCoord(0,0,0);
+  // eomTheory.getHinge1(field, site, 0, 1, false, 1, true).print();
+
+  // monsta::Matrix hinge = monsta::identity;
+  // LATfield2::Site tempSite(site);
+  // tempSite = tempSite - dir1;
+  // hinge = hinge*monsta::conjugateTranspose(monsta::Matrix(field, tempSite, dir1));
+  // monsta::conjugateTranspose(monsta::Matrix(field, tempSite, dir1)).print();
+  // hinge = hinge*monsta::Matrix(field, tempSite, dir2);
+  // monsta::Matrix(field, tempSite, dir2).print();
+  // tempSite = tempSite + dir2;
+  // hinge = hinge*monsta::Matrix(field, tempSite, 0);
+  // monsta::Matrix(field, tempSite, 0).print();
+  // tempSite = tempSite + 0;
+  // tempSite = tempSite - dir2;
+  // hinge = hinge*conjugateTranspose(monsta::Matrix(field, tempSite, dir2));
+  // conjugateTranspose(monsta::Matrix(field, tempSite, dir2)).print();
+  // hinge = hinge*monsta::Matrix(field, tempSite, dir1);
+  // monsta::Matrix(field, tempSite, dir1).print();
+
+  // hinge.print();
+
+
 
 
   monsta::TheoryChecker checker(tol);
