@@ -19,6 +19,10 @@ namespace monsta {
     void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
     monsta::Matrix getPlaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const;
     monsta::Matrix getStaple(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp) const;
+    monsta::Matrix getHinge1(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const;
+    monsta::Matrix getHinge2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const;
+    monsta::Matrix getHinge3(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const;
+    monsta::Matrix getDirectedLink(LATfield2::Field< std::complex<double> > &field,  LATfield2::Site &site, int dir, bool isFwd) const;
 
   private:
     bool tHooftLineCheck(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
@@ -82,11 +86,12 @@ namespace monsta {
         // Derivative of Wilson action
         Matrix plaquetteDerivMat(2);
         plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir1, true);
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir1, false);
+        plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir1, false);
         plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir2, true);
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir2, false);
+        plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir2, false);
 
         grad = grad - 2.0/pow(gaugeCoupling_,2)*plaquetteDerivMat;
+        // grad.print();
         // grad = grad - 2.0/pow(gaugeCoupling_,2)*getTHooftDeriv(field, site, matIdx, fluxQuanta_);
 
         // // Derivative of kinetic term
@@ -100,7 +105,7 @@ namespace monsta {
         // Matrix kineticDerivMat = 2*(covDeriv + conjugateTranspose(covDeriv))*gaugeMat*scalarMatShifted;
         // grad = grad + kineticDerivMat;
 
-        E += real(2.*sqrt(0.5*trace(grad*conjugateTranspose(grad))));
+        E += real(trace(grad*conjugateTranspose(grad)));
         // E += real(trace(grad*conjugateTranspose(Matrix(field, site, matIdx))));
 
       } else {
@@ -139,38 +144,42 @@ namespace monsta {
   {
     monsta::Matrix grad(2);
     if (matIdx < 3)
+    {
+      for (int a = 0; a < 3; a++)
       {
-        int dir1 = (matIdx + 1) % 3;
-        int dir2 = (matIdx + 2) % 3;
-        int derivIdx = site.index();
-
-        Matrix plaquetteDerivMat(2);
-
-        // Derivative of Wilson action
-        // plaquetteDerivMat = plaquetteDerivMat + 2.0*getStaple(field, site, matIdx, dir1, true);
-        // plaquetteDerivMat = plaquetteDerivMat + 2.0*getStaple(field, site, matIdx, dir1, false);
-        // plaquetteDerivMat = plaquetteDerivMat + 2.0*getStaple(field, site, matIdx, dir2, true);
-        // plaquetteDerivMat = plaquetteDerivMat + 2.0*getStaple(field, site, matIdx, dir2, false);
-
-
-        // LATfield2::Site siteShifted(site);
-        // siteShifted = site + dir1;
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, siteShifted, matIdx, dir1, true);
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, siteShifted, matIdx, dir1, false);
-
-        // siteShifted = siteShifted - dir1 + dir2;
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, siteShifted, matIdx, dir2, true);
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, siteShifted, matIdx, dir2, false);
-
-        // siteShifted = siteShifted - dir2 + matIdx;
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, siteShifted, matIdx, dir1, true);
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, siteShifted, matIdx, dir1, false);
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, siteShifted, matIdx, dir2, true);
-        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, siteShifted, matIdx, dir2, false);
-
-
-        // grad = grad - 2.0/pow(gaugeCoupling_,2)*plaquetteDerivMat;
+        if (a == matIdx) { continue; }
+        for (bool sgnA : {false, true})
+        {
+          for (int b = 0; b < 3; b++)
+          {
+            if (b == matIdx) { continue; }
+            for (bool sgnB : {false, true})
+            {
+              if (a == b && sgnA != sgnB) { continue; }
+              grad = grad + 2*2.0/pow(gaugeCoupling_,2)*getHinge1(field, site, matIdx, a, sgnA, b, sgnB);
+            }
+          }
+        }
       }
+
+      for (int a = 0; a < 3; a++)
+      {
+        for (bool sgnA : {false, true})
+        {
+          if (a == matIdx && !sgnA) { continue; }
+          for (int b = 0; b < 3; b++)
+          {
+            if (b == matIdx) { continue; }
+            if (b == a) { continue; }
+            for (bool sgnB : {false, true})
+            {
+              grad = grad + 2*2.0/pow(gaugeCoupling_,2)*getHinge2(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad + 2*2.0/pow(gaugeCoupling_,2)*getHinge3(field, site, matIdx, a, sgnA, b, sgnB);
+            }
+          }
+        }
+      }
+    }
 
     return grad;
   }
@@ -246,6 +255,7 @@ namespace monsta {
       applyDirichletBoundaryConditions(field);
       return;
     }
+    field.updateHalo();
     field.updateHalo();
     // if (boundaryConditions_[0] == -1 && boundaryConditions_[1] == -1 && boundaryConditions_[2] == -1)
     // {
@@ -386,46 +396,95 @@ namespace monsta {
     return plaquette;
   }
 
-  monsta::Matrix GeorgiGlashowSu2EomTheory::getStaple(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp) const
+  monsta::Matrix GeorgiGlashowSu2EomTheory::getStaple(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isPos2) const
   {
     LATfield2::Site tempSite(site);
-    monsta::Matrix staple(field, site, dir2);
+    monsta::Matrix staple = getDirectedLink(field, site, dir2, isPos2);
 
-    if (isUp)
-    {
-      tempSite = tempSite + dir2;
-      staple = staple*Matrix(field, tempSite, dir1);
-      tempSite = tempSite-dir2+dir1;
-      staple = staple*conjugateTranspose(Matrix(field, tempSite, dir2));
-    }
-    else
-    {
-      tempSite = tempSite - dir2;
-      staple = conjugateTranspose(Matrix(field, tempSite, dir2));
-      staple = staple*Matrix(field, tempSite, dir1);
-      tempSite = tempSite + dir1;
-      staple = staple*Matrix(field, tempSite, dir2);
-    }
+    tempSite = isPos2 ? tempSite + dir2 : tempSite - dir2;
+    staple = staple*Matrix(field, tempSite, dir1);
+    tempSite = isPos2 ? tempSite-dir2+dir1 : tempSite+dir2-dir1;
+    staple = staple*conjugateTranspose(getDirectedLink(field, tempSite, dir2, isPos2));
 
     return staple;
 
   }
 
-  monsta::Matrix GeorgiGlashowSu2EomTheory::getHinge(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int derivDir, int dir1, int dir2)
+  monsta::Matrix GeorgiGlashowSu2EomTheory::getHinge1(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site,
+    int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const
   {
     LATfield2::Site tempSite(site);
-    monsta::Matrix hinge(2);
+    monsta::Matrix hinge = identity;
 
-    hinge = hinge*field(site, dir1);
-    tempSite = tempSite + dir1;
-    hinge = hinge*field(tempSite, dir2);
-    tempSite = tempSite + dir2;
-    hinge = hinge*field(tempSite, derivDir);
-    tempSite = tempSite - dir2 + derivDir;
-    hinge = hinge*conjugateTranspose(field(tempSite, dir2));
-    tempSite = tempSite - dir1;
-    hinge = hinge*conjugateTranspose(field(tempSite, dir1));
+    hinge = hinge*getDirectedLink(field, site, dir1, isPos1);
+    // hinge.print();
+    tempSite = isPos1 ? tempSite + dir1 : tempSite - dir1;
+    hinge = hinge*getDirectedLink(field, tempSite, dir2, isPos2);
+    // getDirectedLink(field, tempSite, dir2, isPos2).print();
+    // hinge.print();
+    tempSite = isPos2 ? tempSite + dir2 : tempSite - dir2;
+    hinge = hinge*Matrix(field, tempSite, derivDir);
+    // hinge.print();
+    tempSite = isPos2 ? tempSite - dir2 + derivDir : tempSite + dir2 + derivDir;
+    hinge = hinge*conjugateTranspose(getDirectedLink(field, tempSite, dir2, isPos2));
+    // hinge.print();
+    tempSite = isPos1 ? tempSite - dir1 : tempSite + dir1;
+    hinge = hinge*conjugateTranspose(getDirectedLink(field, tempSite, dir1, isPos1));
+    // hinge.print();
 
+    return hinge;
+  }
+
+  monsta::Matrix GeorgiGlashowSu2EomTheory::getHinge2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site,
+    int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const
+  {
+    LATfield2::Site tempSite(site);
+    monsta::Matrix hinge = identity;
+
+    hinge = hinge*getDirectedLink(field, site, dir2, isPos2);
+    tempSite = isPos2 ? tempSite + dir2 : tempSite - dir2;
+    hinge = hinge*Matrix(field, tempSite, derivDir);
+    tempSite = tempSite + derivDir;
+    hinge = hinge*getDirectedLink(field, tempSite, dir1, isPos1);
+    tempSite = isPos1 ? tempSite + dir1 : tempSite - dir1;
+    tempSite = isPos2 ? tempSite - dir2 : tempSite + dir2;
+    hinge = hinge*conjugateTranspose(getDirectedLink(field, tempSite, dir2, isPos2));
+    tempSite = isPos1 ? tempSite - dir1 : tempSite + dir1;
+    hinge = hinge*conjugateTranspose(getDirectedLink(field, tempSite, dir1, isPos1));
+
+    return hinge;
+  }
+
+  monsta::Matrix GeorgiGlashowSu2EomTheory::getHinge3(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site,
+    int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const
+  {
+    LATfield2::Site tempSite(site);
+    monsta::Matrix hinge = identity;
+
+    tempSite = isPos1 ? tempSite - dir1 : tempSite + dir1;
+    hinge = hinge*conjugateTranspose(getDirectedLink(field, tempSite, dir1, isPos1));
+    hinge = hinge*getDirectedLink(field, tempSite, dir2, isPos2);
+    tempSite = isPos2 ? tempSite + dir2 : tempSite - dir2;
+    hinge = hinge*getDirectedLink(field, tempSite, dir1, isPos1);
+    tempSite = isPos1 ? tempSite + dir1 : tempSite - dir1;
+    hinge = hinge*Matrix(field, tempSite, derivDir);
+    tempSite = isPos2 ? tempSite + derivDir - dir2 : tempSite + derivDir + dir2;
+    hinge = hinge*conjugateTranspose(getDirectedLink(field, tempSite, dir2, isPos2));
+
+    return hinge;
+  }
+
+  monsta::Matrix GeorgiGlashowSu2EomTheory::getDirectedLink(LATfield2::Field< std::complex<double> > &field,  LATfield2::Site &site, int dir, bool isFwd) const
+  {
+    if (isFwd)
+    {
+      return Matrix(field, site, dir);
+    }
+    else
+    {
+      LATfield2::Site reversedSite = site - dir;
+      return conjugateTranspose(Matrix(field, reversedSite, dir));
+    }
   }
 
   double GeorgiGlashowSu2EomTheory::getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const

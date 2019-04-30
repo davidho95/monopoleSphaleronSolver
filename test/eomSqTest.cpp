@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 
   int dim = 3;
   int latSize[dim] = {sz, sz, sz};
-  int haloSize = 1;
+  int haloSize = 2;
   int numMatrices = 4;
   int numRows = 2;
   int numCols = 2;
@@ -72,7 +72,8 @@ int main(int argc, char **argv)
     for (int ii = 0; ii < numMatrices - 1; ii++)
     {
       // monsta::Matrix su2Mat = monsta::vecToSu2({0, 0.001, 0.01});
-      monsta::Matrix su2Mat = monsta::vecToSu2({rand() % 10, rand() % 10, rand() % 10});
+      monsta::Matrix su2Mat = monsta::vecToSu2({double(rand() % 10), double(rand() % 10), double(rand() % 10)});
+      // monsta::Matrix su2Mat = monsta::vecToSu2({1, 1, 1});
       field(site, ii, 0, 0) = su2Mat(0, 0);
       field(site, ii, 0, 1) = su2Mat(0, 1);
       field(site, ii, 1, 0) = su2Mat(1, 0);
@@ -84,16 +85,17 @@ int main(int argc, char **argv)
     field(site, 3, 1, 1) = 0;
   }
   field.updateHalo();
+  field.updateHalo();
 
   double initialStep = 0.001;
   double maxStepSize = 0.05;
   double tol = 1e-6;
   int maxNumSteps = 10000;
 
-  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {-1, -1, -1}, true);
-  monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {-1, -1, -1}, true);
+  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {1,1,1}, false);
+  monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {1,1,1}, false);
 
-  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
+  // monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
   // solver.setVerbosity(false);
   // solver.solve(theory, field);
 
@@ -101,8 +103,14 @@ int main(int argc, char **argv)
   // (theory.getLocalGradient(field, site, 1)).print();
   // monsta::Matrix(field, site, 1).print();
 
+  // site.setCoord(0,0,0);
+  // eomTheory.getHinge3(field, site, 0, 1, true, 1, false).print();
+
+
   monsta::TheoryChecker checker(tol);
   checker.checkGradients(eomTheory, field);
+
+  // eomTheory.getLocalGradient(field, site, 0);
 
   // double gradSq = 0;
 
@@ -126,9 +134,9 @@ int main(int argc, char **argv)
 
   // parallel.sum(gradSq);
   // COUT << gradSq << endl;
-  double E = eomTheory.computeEnergy(field);
-  COUT << E << endl;
+  // double E = eomTheory.computeEnergy(field);
+  // COUT << E << endl;
 
   clock_t end = clock();
-  COUT << double(end - begin) / CLOCKS_PER_SEC << endl;
+  // COUT << double(end - begin) / CLOCKS_PER_SEC << endl;
 }
