@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
-  field.updateHalo();
+  // field.updateHalo();
 
   LATfield2::Site site(lattice);
 
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
       field(site, ii, 1, 0) = su2Mat(1, 0);
       field(site, ii, 1, 1) = su2Mat(1, 1);
     }
-    field(site, 3, 0, 0) = vev / sqrt(2);
+    field(site, 3, 0, 0) = double(rand() % 10);
     field(site, 3, 0, 1) = 0;
     field(site, 3, 1, 0) = 0;
     field(site, 3, 1, 1) = 0;
@@ -88,81 +88,61 @@ int main(int argc, char **argv)
   double tol = 1e-6;
   int maxNumSteps = 10000;
 
-  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {-1,-1,-1}, false);
-  monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {-1,-1,-1}, false);
+  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {1,1,1}, false);
+  monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {1,1,1}, false);
 
   eomTheory.applyBoundaryConditions(field);
 
-  // monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
-  // solver.setVerbosity(false);
-  // solver.solve(theory, field);
+  ofstream fileStream;
+  fileStream.open("mathematicaInput.txt");
 
-  // site.setCoord(rand() % sz, rand() % sz, rand() % sz);
-  // (theory.getLocalGradient(field, site, 1)).print();
-  // monsta::Matrix(field, site, 1).print();
+  fileStream << "{";
+  for (site.first(); site.test(); site.next())
+  {
+    for (int ii = 0; ii < numMatrices - 1; ii++)
+    {
+      fileStream << "u[{" << site.coord(0) << "," << site.coord(1) << "," << site.coord(2) << "}," << ii << "] -> {{";
+      fileStream << field(site, ii, 0, 0).real() << (field(site, ii, 0, 0).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 0, 0).imag()) << "I,";
+      fileStream << field(site, ii, 0, 1).real() << (field(site, ii, 0, 1).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 0, 1).imag()) << "I} , {";
+      fileStream << field(site, ii, 1, 0).real() << (field(site, ii, 1, 0).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 1, 0).imag()) << "I,";
+      fileStream << field(site, ii, 1, 1).real() << (field(site, ii, 1, 1).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 1, 1).imag()) << "I}},";
+      fileStream << endl;
+    }
+  }
 
-  // site.setCoord(0,0,0);
-  // eomTheory.getHinge3(field, site, 0, 1, true, 1, false).print();
+  for (site.haloFirst(); site.haloTest(); site.haloNext())
+  {
+    for (int ii = 0; ii < numMatrices - 1; ii++)
+    {
+      fileStream << "u[{" << site.coord(0) << "," << site.coord(1) << "," << site.coord(2) << "}," << ii << "] -> {{";
+      fileStream << field(site, ii, 0, 0).real() << (field(site, ii, 0, 0).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 0, 0).imag()) << "I,";
+      fileStream << field(site, ii, 0, 1).real() << (field(site, ii, 0, 1).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 0, 1).imag()) << "I} , {";
+      fileStream << field(site, ii, 1, 0).real() << (field(site, ii, 1, 0).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 1, 0).imag()) << "I,";
+      fileStream << field(site, ii, 1, 1).real() << (field(site, ii, 1, 1).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 1, 1).imag()) << "I}},";
+      fileStream << endl;
+    }
+  }
 
-  // eomTheory.getLocalGradient(field, site, 0);
-
-  int dir1 = 1;
-  int dir2 = 1;
-
-  // site.setCoord(0,0,0);
-  // eomTheory.getHinge1(field, site, 0, 1, false, 1, true).print();
-
-  // monsta::Matrix hinge = monsta::identity;
-  // LATfield2::Site tempSite(site);
-  // tempSite = tempSite - dir1;
-  // hinge = hinge*monsta::conjugateTranspose(monsta::Matrix(field, tempSite, dir1));
-  // monsta::conjugateTranspose(monsta::Matrix(field, tempSite, dir1)).print();
-  // hinge = hinge*monsta::Matrix(field, tempSite, dir2);
-  // monsta::Matrix(field, tempSite, dir2).print();
-  // tempSite = tempSite + dir2;
-  // hinge = hinge*monsta::Matrix(field, tempSite, 0);
-  // monsta::Matrix(field, tempSite, 0).print();
-  // tempSite = tempSite + 0;
-  // tempSite = tempSite - dir2;
-  // hinge = hinge*conjugateTranspose(monsta::Matrix(field, tempSite, dir2));
-  // conjugateTranspose(monsta::Matrix(field, tempSite, dir2)).print();
-  // hinge = hinge*monsta::Matrix(field, tempSite, dir1);
-  // monsta::Matrix(field, tempSite, dir1).print();
-
-  // hinge.print();
-
-
-
+  for (site.first(); site.test(); site.next())
+  {
+    fileStream << "p[{" << site.coord(0) << "," << site.coord(1) << "," << site.coord(2) << "}] -> ";
+    fileStream << real(field(site, 3, 0, 0)) << "PauliMatrix[3]," << endl;
+  }
+  for (site.haloFirst(); site.haloTest(); site.haloNext())
+  {
+    fileStream << "p[{" << site.coord(0) << "," << site.coord(1) << "," << site.coord(2) << "}] -> ";
+    fileStream << real(field(site, 3, 0, 0)) << "PauliMatrix[3]," << endl;
+  }
+  fileStream << "}";
 
   monsta::TheoryChecker checker(tol);
   checker.checkGradients(eomTheory, field);
 
-  // eomTheory.getLocalGradient(field, site, 0);
+  // site.setCoord(0,0,0);
+  // cout << eomTheory.getLocalEnergyDensity(field, site) << endl;
 
-  // double gradSq = 0;
-
-  // for (site.first(); site.test(); site.next())
-  // {
-  //   for (int matIdx = 0; matIdx < 4; matIdx++)
-  //   {
-  //     monsta::Matrix gradMat = theory.getLocalGradient(field, site, matIdx);
-  //     monsta::Matrix fieldMat(field, site, matIdx);
-  //     if (matIdx < 3)
-  //     {
-  //       // cout << 2.*sqrt(0.5*monsta::trace(gradMat*conjugateTranspose(gradMat))) + monsta::trace(gradMat*conjugateTranspose(fieldMat)) << endl;
-  //       gradSq += real(2.*sqrt(0.5*monsta::trace(gradMat*conjugateTranspose(gradMat))) + monsta::trace(gradMat*conjugateTranspose(fieldMat)));
-  //     }
-  //     else
-  //     {
-  //       gradSq += pow(real(gradMat(0, 0)), 2);
-  //     }
-  //   }
-  // }
-
-  // parallel.sum(gradSq);
-  // COUT << gradSq << endl;
-  // double E = eomTheory.computeEnergy(field);
-  // COUT << E << endl;
+  double E = eomTheory.computeEnergy(field);
+  COUT << E << endl;
 
   clock_t end = clock();
   // COUT << double(end - begin) / CLOCKS_PER_SEC << endl;
