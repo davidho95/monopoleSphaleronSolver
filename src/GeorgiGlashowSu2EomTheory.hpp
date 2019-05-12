@@ -19,7 +19,9 @@ namespace monsta {
     void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
     monsta::Matrix getCovDeriv(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
     monsta::Matrix getKineticDeriv(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
-    monsta::Matrix getDirectedKineticDeriv(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
+    monsta::Matrix getDirectedKineticDeriv(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir, bool isFwd) const;
+    monsta::Matrix getInsert2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
+    monsta::Matrix getDirectedInsert2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir, bool isFwd) const;
     monsta::Matrix getPlaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const;
     monsta::Matrix getStaple(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp) const;
     monsta::Matrix getHinge1(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const;
@@ -30,8 +32,8 @@ namespace monsta {
     monsta::Matrix getDblPlaquetteDeriv3(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const;
     monsta::Matrix getDblPlaquetteDeriv4(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int derivDir, int dir1, bool isPos1, int dir2, bool isPos2) const;
     monsta::Matrix getKinDerivInsertStaple(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp, int insertIdx) const;
+    monsta::Matrix getInsertStaple2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp, int insertIdx) const;
     monsta::Matrix getDirectedLink(LATfield2::Field< std::complex<double> > &field,  LATfield2::Site &site, int dir, bool isFwd) const;
-    monsta::Matrix getDirectedKineticDeriv(LATfield2::Field< std::complex<double> > &field,  LATfield2::Site &site, int dir, bool isFwd) const;
 
   private:
     bool tHooftLineCheck(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
@@ -87,27 +89,19 @@ namespace monsta {
         // E -= real(trace(plaqMat));
 
         // Derivative of Wilson action
-        Matrix plaquetteDerivMat(2);
-        plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir1, true);
-        plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir1, false);
-        plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir2, true);
-        plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir2, false);
+        // Matrix plaquetteDerivMat(2);
+        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir1, true);
+        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir1, false);
+        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir2, true);
+        // plaquetteDerivMat = plaquetteDerivMat + getStaple(field, site, matIdx, dir2, false);
 
-        plaquetteDerivMat = -2.0/pow(gaugeCoupling_,2)*plaquetteDerivMat;
-        grad = grad + plaquetteDerivMat;
-        // grad = grad - 2.0/pow(gaugeCoupling_,2)*getTHooftDeriv(field, site, matIdx, fluxQuanta_);
+        // plaquetteDerivMat = -2.0/pow(gaugeCoupling_,2)*plaquetteDerivMat;
+        // grad = grad + plaquetteDerivMat;
+        // // grad = grad - 2.0/pow(gaugeCoupling_,2)*getTHooftDeriv(field, site, matIdx, fluxQuanta_);
 
-        // Derivative of kinetic term
-        Matrix kineticDerivMat = getKineticDeriv(field, site, matIdx);
-        grad = grad + kineticDerivMat;
-
-        Matrix plaqGradProj = plaquetteDerivMat*conjugateTranspose(Matrix(field, site, matIdx));
-        Matrix kineticDerivProj = kineticDerivMat*conjugateTranspose(Matrix(field, site, matIdx));
-
-        // cout << real(trace(plaqGradProj*kineticDerivProj + kineticDerivProj*plaqGradProj)) << endl;
-        E -= real(trace(plaqGradProj*kineticDerivProj + kineticDerivProj*plaqGradProj));
-        // E += real(trace(grad*conjugateTranspose(kineticDerivMat) + kineticDerivMat*conjugateTranspose(grad)));
-        // E += real(trace(kineticDerivMat*conjugateTranspose(kineticDerivMat)));
+        // // Derivative of kinetic term
+        // Matrix kineticDerivMat = getKineticDeriv(field, site, matIdx);
+        // grad = grad + kineticDerivMat;
 
         // E += real(trace(grad*conjugateTranspose(grad)));
         // monsta::Matrix gradProj = grad*conjugateTranspose(Matrix(field, site, matIdx));
@@ -117,32 +111,33 @@ namespace monsta {
         // if (abs(field(site, 3, 0, 0)) < 1e-15) { return grad; }
         for (int dir = 0; dir < 3; dir++)
         {
-          // // Deriviative of kinetic term
-          // LATfield2::Site tempSite = site + dir;
-          // Matrix scalarMat = field(site, 3, 0, 0)*pauli3;
-          // Matrix scalarMatShiftedFwd = field(tempSite, 3, 0, 0)*pauli3;
-          // Matrix gaugeMat(field, site, dir);
+          // Deriviative of kinetic term
+          LATfield2::Site tempSite = site + dir;
+          Matrix scalarMat = field(site, 3, 0, 0)*pauli3;
+          Matrix scalarMatShiftedFwd = field(tempSite, 3, 0, 0)*pauli3;
+          Matrix gaugeMat(field, site, dir);
 
-          // tempSite = site - dir;
-          // Matrix gaugeMatShiftedBwd(field, tempSite, dir);
-          // Matrix scalarMatShiftedBwd = field(tempSite, 3, 0, 0)*pauli3;
+          tempSite = site - dir;
+          Matrix gaugeMatShiftedBwd(field, tempSite, dir);
+          Matrix scalarMatShiftedBwd = field(tempSite, 3, 0, 0)*pauli3;
 
-          // Matrix kineticDerivMat = 2*conjugateTranspose(gaugeMatShiftedBwd)*gaugeMatShiftedBwd*conjugateTranspose(scalarMat)*conjugateTranspose(gaugeMatShiftedBwd)*gaugeMatShiftedBwd;
-          // kineticDerivMat = kineticDerivMat - 2*gaugeMat*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMat);
-          // kineticDerivMat = kineticDerivMat - 2*conjugateTranspose(gaugeMatShiftedBwd)*conjugateTranspose(scalarMatShiftedBwd)*gaugeMatShiftedBwd;
-          // kineticDerivMat = kineticDerivMat + 2*conjugateTranspose(scalarMat);
+          Matrix kineticDerivMat(2);
+          kineticDerivMat = kineticDerivMat + 2*conjugateTranspose(gaugeMatShiftedBwd)*gaugeMatShiftedBwd*conjugateTranspose(scalarMat)*conjugateTranspose(gaugeMatShiftedBwd)*gaugeMatShiftedBwd;
+          kineticDerivMat = kineticDerivMat - 2*gaugeMat*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMat);
+          kineticDerivMat = kineticDerivMat - 2*conjugateTranspose(gaugeMatShiftedBwd)*conjugateTranspose(scalarMatShiftedBwd)*gaugeMatShiftedBwd;
+          kineticDerivMat = kineticDerivMat + 2*conjugateTranspose(scalarMat);
 
-          // grad(0,0) = grad(0,0) + 2.*kineticDerivMat(0,0);
+          grad = grad + kineticDerivMat;
         }
 
         // Derivative of Higgs Potential
         // grad(0,0) = grad(0,0) + 8.0*selfCoupling_*field(site, 3, 0, 0)*(2.0*pow(field(site, 3, 0, 0),2) - pow(vev_, 2));
 
-        // E += pow(real(grad(0,0)),2);
+        E += real(trace(grad*grad));
       }
     }
 
-    cout << E << endl;
+    // cout << E << endl;
 
     return E;
   }
@@ -163,7 +158,10 @@ namespace monsta {
       //       if (b == matIdx) { continue; }
       //       for (bool sgnB : {false, true})
       //       {
+      //         // Pure gauge, magnitude
       //         grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge1(field, site, matIdx, a, sgnA, b, sgnB);
+
+      //         // Pure gauge, projected
       //         grad = grad - 4*2.0/pow(gaugeCoupling_,2)*getDblPlaquetteDeriv1(field, site, matIdx, a, sgnA, b, sgnB);
       //         grad = grad - 4*2.0/pow(gaugeCoupling_,2)*getDblPlaquetteDeriv4(field, site, matIdx, a, sgnA, b, sgnB);
       //       }
@@ -181,8 +179,10 @@ namespace monsta {
       //       if (b == a) { continue; }
       //       for (bool sgnB : {false, true})
       //       {
+      //         // Pure gauge, magnitude
       //         grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge2(field, site, matIdx, a, sgnA, b, sgnB);
       //         grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge3(field, site, matIdx, a, sgnA, b, sgnB);
+      //         // Pure gauge, projected
       //         grad = grad - 4*2.0/pow(gaugeCoupling_,2)*getDblPlaquetteDeriv2(field, site, matIdx, a, sgnA, b, sgnB);
       //         grad = grad - 4*2.0/pow(gaugeCoupling_,2)*getDblPlaquetteDeriv3(field, site, matIdx, a, sgnA, b, sgnB);
       //       }
@@ -203,18 +203,30 @@ namespace monsta {
       //   {
       //     for (bool stapleSgn : {true, false})
       //     {
+      //       // Cross terms from squared magnitude
       //       grad = grad - 2*2.0/pow(gaugeCoupling_,2)*getKinDerivInsertStaple(field, site, matIdx, ii, stapleSgn, stapleLinkIdx);
+
+      //       // Cross terms from projected square
+      //       grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getInsertStaple2(field, site, matIdx, ii, stapleSgn, stapleLinkIdx);
       //     }
       //   }
 
       //   Matrix stapleSum = getStaple(field, site, matIdx, ii, true) + getStaple(field, site, matIdx, ii, false);
       //   Matrix stapleSumPlus = stapleSum*conjugateTranspose(scalarMatShifted)*conjugateTranspose(gaugeMat);
+      //   Matrix stapleSumPlus2 = gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat)*stapleSum*conjugateTranspose(gaugeMat);
 
+      //   // Cross terms from squared magnitude
       //   grad = grad - 4*2.0/pow(gaugeCoupling_,2)*(stapleSumPlus + conjugateTranspose(stapleSumPlus))*gaugeMat*(scalarMatShifted + conjugateTranspose(scalarMatShifted));
-
       //   grad = grad - 4*2.0/pow(gaugeCoupling_,2)*covDerivSum*stapleSum*conjugateTranspose(scalarMatShifted);
+
+      //     // Cross terms from projected square
+      //     grad = grad + 4*2.0/pow(gaugeCoupling_,2)*(stapleSumPlus2 + conjugateTranspose(stapleSumPlus2))*gaugeMat*(scalarMatShifted + conjugateTranspose(scalarMatShifted));
+      //     grad = grad + 4*2.0/pow(gaugeCoupling_,2)*covDerivSum*gaugeMat*conjugateTranspose(stapleSum)*gaugeMat*conjugateTranspose(scalarMatShifted);
+      //     grad = grad + 4*2.0/pow(gaugeCoupling_,2)*stapleSum*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat*scalarMatShifted;
+      //     grad = grad + 4*2.0/pow(gaugeCoupling_,2)*covDerivSum*gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat)*stapleSum;
       // }
 
+      // // Square of kinetic term
       // Matrix kineticDerivMat = getKineticDeriv(field, site, matIdx);
       // grad = grad + 8*2.0/pow(gaugeCoupling_,2)
       //   *kineticDerivMat*conjugateTranspose(scalarMatShifted)*scalarMatShifted;//*conjugateTranspose(gaugeMat)*gaugeMat
@@ -224,67 +236,112 @@ namespace monsta {
       //   // *(scalarMatShifted + conjugateTranspose(scalarMatShifted));
       // grad = grad + 4*2.0/pow(gaugeCoupling_,2)
       //   *covDerivSum*covDerivSum*gaugeMat*scalarMatShifted*conjugateTranspose(scalarMatShifted);
+
+      // // Square of projected kinetic term
+      // grad = grad - 4*2.0/pow(gaugeCoupling_,2)
+      //   *gaugeMat*conjugateTranspose(scalarMatShifted)*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat
+      //   *conjugateTranspose(scalarMatShifted)*(scalarMatShifted + conjugateTranspose(scalarMatShifted));
+      // grad = grad - 4*2.0/pow(gaugeCoupling_,2)
+      //   *gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat*scalarMatShifted
+      //   *(scalarMatShifted + conjugateTranspose(scalarMatShifted));
+      // grad = grad - 8*2.0/pow(gaugeCoupling_,2)
+      //   *covDerivSum*gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat*scalarMatShifted;
+
+
+
+
     }
     else
-    {
-      for (int ii = 0; ii < 3; ii++)
-      {
-      // for (int jj = 0; jj < 3; jj++)
-      //   {
-      //     if (jj == ii) { continue; }
-      //     LATfield2::Site siteShiftedFwd = site + ii;
-      //     LATfield2::Site siteShiftedBwd = site - ii;
-      //     LATfield2::Site siteShiftedUp = site + jj;
-      //     LATfield2::Site siteShiftedDown = site - jj;
+    // {
+    //   for (int ii = 0; ii < 3; ii++)
+    //   {
+    //   for (int jj = 0; jj < 3; jj++)
+    //     {
+    //       if (jj == ii) { continue; }
+    //       LATfield2::Site siteShiftedFwd = site + ii;
+    //       LATfield2::Site siteShiftedBwd = site - ii;
+    //       LATfield2::Site siteShiftedUp = site + jj;
+    //       LATfield2::Site siteShiftedDown = site - jj;
 
-      //     Matrix gaugeMatFwd(field, site, ii);
-      //     Matrix gaugeMatShiftedBwd(field, siteShiftedBwd, ii);
+    //       Matrix gaugeMatFwd(field, site, ii);
+    //       Matrix gaugeMatShiftedBwd(field, siteShiftedBwd, ii);
 
-      //     Matrix scalarMat = field(site, 3, 0, 0)*pauli3;
-      //     Matrix scalarMatShiftedFwd = field(siteShiftedFwd, 3, 0, 0)*pauli3;
+    //       Matrix scalarMat = field(site, 3, 0, 0)*pauli3;
+    //       Matrix scalarMatShiftedFwd = field(siteShiftedFwd, 3, 0, 0)*pauli3;
 
-      //     Matrix stapleSumShiftedBwd = getStaple(field, siteShiftedBwd, ii, jj, true) + getStaple(field, siteShiftedBwd, ii, jj, false);
-      //     Matrix gradMat1 = conjugateTranspose(gaugeMatShiftedBwd)*stapleSumShiftedBwd*conjugateTranspose(scalarMat)*conjugateTranspose(gaugeMatShiftedBwd)*gaugeMatShiftedBwd;
-      //     gradMat1 = gradMat1 + conjugateTranspose(gradMat1);
-      //     grad(0,0) = grad(0,0) - 8*2.0/pow(gaugeCoupling_,2)*gradMat1(0,0);
+    //       Matrix stapleSumShiftedBwd = getStaple(field, siteShiftedBwd, ii, jj, true) + getStaple(field, siteShiftedBwd, ii, jj, false);
 
-      //     Matrix kinDerivSumBwd = getCovDeriv(field, siteShiftedBwd, ii) + conjugateTranspose(getCovDeriv(field, siteShiftedBwd, ii));
-      //     Matrix gradMat2 = conjugateTranspose(gaugeMatShiftedBwd)*kinDerivSumBwd*stapleSumShiftedBwd;
-      //     grad(0,0) = grad(0,0) - 8*2.0/pow(gaugeCoupling_,2)*real(gradMat2(0,0));
+    //       // Cross terms from squared magnitude
+    //       Matrix gradMat1 = conjugateTranspose(gaugeMatShiftedBwd)*stapleSumShiftedBwd*conjugateTranspose(scalarMat)*conjugateTranspose(gaugeMatShiftedBwd)*gaugeMatShiftedBwd;
+    //       gradMat1 = gradMat1 + conjugateTranspose(gradMat1);
+    //       grad(0,0) = grad(0,0) - 8*2.0/pow(gaugeCoupling_,2)*gradMat1(0,0);
 
-      //     Matrix stapleSum = getStaple(field, site, ii, jj, true) + getStaple(field, site, ii, jj, false);
-      //     Matrix gradMat3 = stapleSum*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMatFwd);
-      //     gradMat3 = gradMat3 + conjugateTranspose(gradMat3);
-      //     grad(0,0) = grad(0,0) + 8*2.0/pow(gaugeCoupling_,2)*gradMat3(0,0);
+    //       Matrix covDerivSumShiftedBwd = getCovDeriv(field, siteShiftedBwd, ii) + conjugateTranspose(getCovDeriv(field, siteShiftedBwd, ii));
+    //       Matrix gradMat2 = conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*stapleSumShiftedBwd;
+    //       grad(0,0) = grad(0,0) - 8*2.0/pow(gaugeCoupling_,2)*real(gradMat2(0,0));
 
-      //   }
+    //       Matrix stapleSum = getStaple(field, site, ii, jj, true) + getStaple(field, site, ii, jj, false);
+    //       Matrix gradMat3 = stapleSum*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMatFwd);
+    //       gradMat3 = gradMat3 + conjugateTranspose(gradMat3);
+    //       grad(0,0) = grad(0,0) + 8*2.0/pow(gaugeCoupling_,2)*gradMat3(0,0);
 
-      // LATfield2::Site siteShiftedFwd = site + ii;
-      // LATfield2::Site siteShiftedBwd = site - ii;
-      // Matrix gaugeMat(field, site, ii);
-      // Matrix gaugeMatShiftedBwd(field, siteShiftedBwd, ii);
-      // Matrix scalarMat = field(site, 3, 0, 0)*pauli3;
-      // Matrix scalarMatShiftedFwd = field(siteShiftedFwd, 3, 0, 0)*pauli3;
-      // Matrix scalarMatShiftedBwd = field(siteShiftedBwd, 3, 0, 0)*pauli3;
+    //       // Cross terms from projected square
+    //       Matrix gradMat7 = conjugateTranspose(stapleSumShiftedBwd)*gaugeMatShiftedBwd*conjugateTranspose(scalarMat);
+    //       gradMat7 = gradMat7 + conjugateTranspose(gradMat7);
+    //       grad(0,0) = grad(0,0) + 8*2.0/pow(gaugeCoupling_,2)*real(gradMat7(0,0));
 
-      // Matrix covDerivSumShiftedBwd = getCovDeriv(field, siteShiftedBwd, ii) + conjugateTranspose(getCovDeriv(field, siteShiftedBwd, ii));
-      // Matrix covDerivSum = getCovDeriv(field, site, ii) + conjugateTranspose(getCovDeriv(field, site, ii));
+    //       Matrix gradMat8 = conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*gaugeMatShiftedBwd
+    //         *conjugateTranspose(stapleSumShiftedBwd)*gaugeMatShiftedBwd;
+    //       grad(0,0) = grad(0,0) + 8*2.0/pow(gaugeCoupling_,2)*real(gradMat8(0,0));
 
-      // Matrix gradMat4 = conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*gaugeMatShiftedBwd*scalarMat
-      //   *conjugateTranspose(scalarMat);//*conjugateTranspose(gaugeMatShiftedBwd)*gaugeMatShiftedBwd;
-      // gradMat4 = gradMat4 + conjugateTranspose(gradMat4);
-      // grad(0,0) = grad(0,0) + 16*gradMat4(0,0);
+    //       Matrix gradMat9 = gaugeMatFwd*conjugateTranspose(stapleSum)*gaugeMatFwd*scalarMatShiftedFwd*conjugateTranspose(gaugeMatFwd);
+    //       gradMat9 = gradMat9 + conjugateTranspose(gradMat9);
+    //       grad(0,0) = grad(0,0) - 8*2.0/pow(gaugeCoupling_,2)*real(gradMat9(0,0));          
 
-      // Matrix gradMat5 = conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*covDerivSumShiftedBwd*gaugeMatShiftedBwd*scalarMat;
-      // grad(0,0) = grad(0,0) + 16*gradMat5(0,0);
+    //     }
 
-      // Matrix gradMat6 = getKineticDeriv(field, site, ii)*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMat);
-      // // Matrix gradMat6 = covDerivSum*gaugeMat*scalarMatShiftedFwd*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMat);
-      // gradMat6 = gradMat6 + conjugateTranspose(gradMat6);
-      // grad(0,0) = grad(0,0) - 8*gradMat6(0,0);
+    //   LATfield2::Site siteShiftedFwd = site + ii;
+    //   LATfield2::Site siteShiftedBwd = site - ii;
+    //   Matrix gaugeMat(field, site, ii);
+    //   Matrix gaugeMatShiftedBwd(field, siteShiftedBwd, ii);
+    //   Matrix scalarMat = field(site, 3, 0, 0)*pauli3;
+    //   Matrix scalarMatShiftedFwd = field(siteShiftedFwd, 3, 0, 0)*pauli3;
+    //   Matrix scalarMatShiftedBwd = field(siteShiftedBwd, 3, 0, 0)*pauli3;
 
-      }
-    }
+    //   Matrix covDerivSumShiftedBwd = getCovDeriv(field, siteShiftedBwd, ii) + conjugateTranspose(getCovDeriv(field, siteShiftedBwd, ii));
+    //   Matrix covDerivSum = getCovDeriv(field, site, ii) + conjugateTranspose(getCovDeriv(field, site, ii));
+
+    //   // Square of kinetic term
+    //   Matrix gradMat4 = conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*gaugeMatShiftedBwd*scalarMat
+    //     *conjugateTranspose(scalarMat);//*conjugateTranspose(gaugeMatShiftedBwd)*gaugeMatShiftedBwd;
+    //   gradMat4 = gradMat4 + conjugateTranspose(gradMat4);
+    //   grad(0,0) = grad(0,0) + 16.0*gradMat4(0,0);
+
+    //   Matrix gradMat5 = conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*covDerivSumShiftedBwd*gaugeMatShiftedBwd*scalarMat;
+    //   grad(0,0) = grad(0,0) + 16.0*gradMat5(0,0);
+
+    //   Matrix gradMat6 = getKineticDeriv(field, site, ii)*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMat);
+    //   // Matrix gradMat6 = covDerivSum*gaugeMat*scalarMatShiftedFwd*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMat);
+    //   gradMat6 = gradMat6 + conjugateTranspose(gradMat6);
+    //   grad(0,0) = grad(0,0) - 8.0*gradMat6(0,0);
+
+    //   // Square of projected kinetic term
+    //   Matrix gradMat10 = scalarMat*conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*gaugeMatShiftedBwd*scalarMat;
+    //   gradMat10 = gradMat10 + conjugateTranspose(gradMat10);
+    //   grad(0,0) = grad(0,0) - 16.0*real(gradMat10(0,0));
+
+    //   Matrix gradMat11 = conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*gaugeMatShiftedBwd
+    //     *scalarMat*conjugateTranspose(gaugeMatShiftedBwd)*covDerivSumShiftedBwd*gaugeMatShiftedBwd;
+    //   grad(0,0) = grad(0,0) - 16.0*gradMat11(0,0);
+
+    //   Matrix gradMat12 = gaugeMat*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMat)
+    //     *covDerivSum*gaugeMat*conjugateTranspose(scalarMatShiftedFwd)*conjugateTranspose(gaugeMat);
+    //   gradMat12 = gradMat12 + conjugateTranspose(gradMat12);
+    //   grad(0,0) = grad(0,0) + 16.0*gradMat12(0,0);
+
+
+    //   }
+    // }
 
     return grad;
   }
@@ -537,6 +594,33 @@ namespace monsta {
     }
   }
 
+  monsta::Matrix GeorgiGlashowSu2EomTheory::getInsert2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const
+  {
+    LATfield2::Site tempSite(site);
+    tempSite = site + dir;
+    Matrix scalarMat = field(site, 3, 0, 0)*pauli3;
+    Matrix scalarMatShifted = field(tempSite, 3, 0, 0)*pauli3;
+    Matrix gaugeMat(field, site, dir);
+
+    Matrix covDeriv = getCovDeriv(field, site, dir);
+
+    return gaugeMat*conjugateTranspose(scalarMatShifted)*conjugateTranspose(gaugeMat)
+      *(covDeriv + conjugateTranspose(covDeriv))*gaugeMat;
+  }
+
+  monsta::Matrix GeorgiGlashowSu2EomTheory::getDirectedInsert2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir, bool isFwd) const
+  {
+    if (isFwd)
+    {
+      return getInsert2(field, site, dir);
+    }
+    else
+    {
+      LATfield2::Site reversedSite = site - dir;
+      return conjugateTranspose(getInsert2(field, reversedSite, dir));
+    }
+  }
+
   monsta::Matrix GeorgiGlashowSu2EomTheory::getPlaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const
   {
     LATfield2::Site tempSite(site);
@@ -751,6 +835,48 @@ namespace monsta {
     if (insertPos == 2)
     {
       insertedStaple = insertedStaple*conjugateTranspose(getDirectedKineticDeriv(field, tempSite, dir2, isPos2));
+    }
+    else
+    {
+      insertedStaple = insertedStaple*conjugateTranspose(getDirectedLink(field, tempSite, dir2, isPos2));
+    }
+
+    return insertedStaple;
+
+  }
+
+  monsta::Matrix GeorgiGlashowSu2EomTheory::getInsertStaple2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site,
+    int dir1, int dir2, bool isPos2, int insertPos) const
+  {
+    LATfield2::Site tempSite(site);
+    monsta::Matrix insertedStaple = identity;
+
+    if (insertPos == 0)
+    {
+      insertedStaple = insertedStaple*getDirectedInsert2(field, tempSite, dir2, isPos2);
+    }
+    else
+    {
+      insertedStaple = insertedStaple*getDirectedLink(field, tempSite, dir2, isPos2);
+    }
+
+    tempSite = isPos2 ? tempSite + dir2 : tempSite - dir2;
+
+    if (insertPos == 1)
+    {
+      insertedStaple = insertedStaple*getInsert2(field, tempSite, dir1);
+    }
+    else 
+    {
+      insertedStaple = insertedStaple*Matrix(field, tempSite, dir1);
+    }
+
+    tempSite = tempSite + dir1;
+    tempSite = isPos2 ? tempSite - dir2 : tempSite + dir2;
+
+    if (insertPos == 2)
+    {
+      insertedStaple = insertedStaple*conjugateTranspose(getDirectedInsert2(field, tempSite, dir2, isPos2));
     }
     else
     {
