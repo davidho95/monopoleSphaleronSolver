@@ -37,12 +37,12 @@ namespace monsta {
     monsta::Matrix getInsertStaple2(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp, int insertIdx) const;
     monsta::Matrix getDirectedLink(LATfield2::Field< std::complex<double> > &field,  LATfield2::Site &site, int dir, bool isFwd) const;
     double getVevDistance(LATfield2::Field< std::complex<double> > &field, LATfield2::Site site) const;
+    monsta::Matrix getTHooftHinge(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
 
   private:
     bool tHooftLineCheck(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
     void applyDirichletBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
     void applyCPeriodicBoundaryConditions(LATfield2::Field< std::complex<double> > &field, int dir) const;
-    void applyTwistedBoundaryConditions(LATfield2::Field< std::complex<double> > &field, int dir) const;
     double getTHooftOperator(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir, std::complex<double> fluxQuanta=1) const;
     monsta::Matrix getTHooftDeriv(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx, std::complex<double> fluxQuanta=1) const;
 
@@ -80,6 +80,30 @@ namespace monsta {
   {
     double E = 0;
 
+    // // Wilson action
+    // E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, site, 1, 2))));
+    // E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, site, 2, 0))));
+    // E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, site, 0, 1))));
+
+    // for (int ii = 0; ii < 3; ii++)
+    // {
+    //   if (tHooftLineCheck(field, site, ii))
+    //   {
+    //     E += getTHooftOperator(field, site, ii, fluxQuanta_);
+    //   }
+    // }
+
+    // Covariant Derivative
+    // for (int ii = 0; ii < 3; ii++)
+    // {
+    //   LATfield2::Site shiftedSite = site + ii;
+    //   Matrix covDeriv = field(shiftedSite, 3, 0, 0)*Matrix(field, site, ii)*pauli3*conjugateTranspose(Matrix(field, site, ii)) - field(site, 3, 0, 0)*pauli3;
+    //   E += real(trace(covDeriv*covDeriv));
+    // }
+
+    // Higgs Potential
+    // E += real(selfCoupling_*pow(2.0*pow(field(site, 3, 0, 0),2) - pow(vev_, 2),2));
+
     for (int matIdx = 0; matIdx < 4; matIdx++)
     {
       monsta::Matrix grad(2);
@@ -98,15 +122,21 @@ namespace monsta {
 
         plaquetteDerivMat = -2.0/pow(gaugeCoupling_,2)*plaquetteDerivMat;
         grad = grad + plaquetteDerivMat;
-        // grad = grad - 2.0/pow(gaugeCoupling_,2)*getTHooftDeriv(field, site, matIdx, fluxQuanta_);
+        Matrix tHooftDerivMat = 2.0/pow(gaugeCoupling_,2)*getTHooftDeriv(field, site, matIdx, fluxQuanta_);
+        grad = grad - tHooftDerivMat;
+        // grad.print();
 
         // Derivative of kinetic term
         Matrix kineticDerivMat = getKineticDeriv(field, site, matIdx);
         grad = grad + kineticDerivMat;
-
+        // E += real(trace())
         E += real(trace(grad*conjugateTranspose(grad)));
+
         monsta::Matrix gradProj = grad*conjugateTranspose(Matrix(field, site, matIdx));
+
         E -= real(trace(gradProj*gradProj));
+        // E -= 0.5*pow(real(trace(gradProj)),2);
+        // COUT << real(trace(grad*conjugateTranspose(grad))) - real(trace(gradProj*gradProj)) << endl;
 
       } else {
         // if (abs(field(site, 3, 0, 0)) < 1e-15) { return grad; }
@@ -148,6 +178,7 @@ namespace monsta {
 
     if (matIdx < 3)
     {
+      grad = grad + getTHooftHinge(field, site, matIdx);
       for (int a = 0; a < 3; a++)
       {
         if (a == matIdx) { continue; }
@@ -159,11 +190,11 @@ namespace monsta {
             for (bool sgnB : {false, true})
             {
               // Pure gauge, magnitude
-              grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge1(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad + 2*pow(2.0/pow(gaugeCoupling_,2),2)*getHinge1(field, site, matIdx, a, sgnA, b, sgnB);
 
               // Pure gauge, projected
-              grad = grad - 4*2.0/pow(gaugeCoupling_,2)*getDblPlaquetteDeriv1(field, site, matIdx, a, sgnA, b, sgnB);
-              grad = grad - 4*2.0/pow(gaugeCoupling_,2)*getDblPlaquetteDeriv4(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad - 2*pow(2.0/pow(gaugeCoupling_,2),2)*getDblPlaquetteDeriv1(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad - 2*pow(2.0/pow(gaugeCoupling_,2),2)*getDblPlaquetteDeriv4(field, site, matIdx, a, sgnA, b, sgnB);
             }
           }
         }
@@ -180,11 +211,11 @@ namespace monsta {
             for (bool sgnB : {false, true})
             {
               // Pure gauge, magnitude
-              grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge2(field, site, matIdx, a, sgnA, b, sgnB);
-              grad = grad + 4*2.0/pow(gaugeCoupling_,2)*getHinge3(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad + 2*pow(2.0/pow(gaugeCoupling_,2),2)*getHinge2(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad + 2*pow(2.0/pow(gaugeCoupling_,2),2)*getHinge3(field, site, matIdx, a, sgnA, b, sgnB);
               // Pure gauge, projected
-              grad = grad - 4*2.0/pow(gaugeCoupling_,2)*getDblPlaquetteDeriv2(field, site, matIdx, a, sgnA, b, sgnB);
-              grad = grad - 4*2.0/pow(gaugeCoupling_,2)*getDblPlaquetteDeriv3(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad - 2*pow(2.0/pow(gaugeCoupling_,2),2)*getDblPlaquetteDeriv2(field, site, matIdx, a, sgnA, b, sgnB);
+              grad = grad - 2*pow(2.0/pow(gaugeCoupling_,2),2)*getDblPlaquetteDeriv3(field, site, matIdx, a, sgnA, b, sgnB);
             }
           }
         }
@@ -228,23 +259,23 @@ namespace monsta {
 
       // Square of kinetic term
       Matrix kineticDerivMat = getKineticDeriv(field, site, matIdx);
-      grad = grad + 8*2.0/pow(gaugeCoupling_,2)
+      grad = grad + 8*2.0
         *kineticDerivMat*conjugateTranspose(scalarMatShifted)*scalarMatShifted;//*conjugateTranspose(gaugeMat)*gaugeMat
         // *(scalarMatShifted + conjugateTranspose(scalarMatShifted));
-      // grad = grad + 4*2.0/pow(gaugeCoupling_,2)
+      // grad = grad + 4*2.0
         // *gaugeMat*scalarMatShifted*conjugateTranspose(scalarMatShifted)*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat
         // *(scalarMatShifted + conjugateTranspose(scalarMatShifted));
-      grad = grad + 4*2.0/pow(gaugeCoupling_,2)
+      grad = grad + 4*2.0
         *covDerivSum*covDerivSum*gaugeMat*scalarMatShifted*conjugateTranspose(scalarMatShifted);
 
       // Square of projected kinetic term
-      grad = grad - 4*2.0/pow(gaugeCoupling_,2)
+      grad = grad - 4*2.0
         *gaugeMat*conjugateTranspose(scalarMatShifted)*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat
         *conjugateTranspose(scalarMatShifted)*(scalarMatShifted + conjugateTranspose(scalarMatShifted));
-      grad = grad - 4*2.0/pow(gaugeCoupling_,2)
+      grad = grad - 4*2.0
         *gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat*scalarMatShifted
         *(scalarMatShifted + conjugateTranspose(scalarMatShifted));
-      grad = grad - 8*2.0/pow(gaugeCoupling_,2)
+      grad = grad - 8*2.0
         *covDerivSum*gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat*scalarMatShifted;
 
               // Square of scalar derivative term
@@ -255,15 +286,13 @@ namespace monsta {
         grad = grad - 16*gaugeMat*fwdBwdCovDerivSumShifted*scalarMatShifted;
         grad = grad + 16*scalarMat*gaugeMat*fwdBwdCovDerivSumShifted;
 
-        // Cross terms in scalar deriv term
+        // // Cross terms in scalar deriv term
         double vevDistance = getVevDistance(field, site);
         double vevDistanceShifted = getVevDistance(field, siteShifted);
 
         grad = grad + 128*selfCoupling_*vevDistanceShifted*gaugeMat*scalarMatShifted*scalarMatShifted;
         grad = grad - 64*selfCoupling_*vevDistance*scalarMat*gaugeMat*scalarMatShifted;
         grad = grad - 64*selfCoupling_*vevDistanceShifted*scalarMat*gaugeMat*scalarMatShifted;
-
-
     }
     else
     {
@@ -389,6 +418,7 @@ namespace monsta {
 
     }
 
+
     return grad;
   }
 
@@ -414,25 +444,74 @@ namespace monsta {
 
     Matrix tHooftDerivMat(2);
 
+    bool jonnyMorris = false;
+    // if (dir2 == 0)
+    // {
+    //   tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir1, true);
+    // }
+
     if (tHooftLineCheck(field, site, dir2)) {
       tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir1, true);
+      // cout << site.coord(0) << " " << site.coord(1) << " " << site.coord(2) << "; " << matIdx << "+" << endl;
+      jonnyMorris = true;
     }
     if (tHooftLineCheck(field, site, dir1)) {
       tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir2, true);
+      // cout << site.coord(0) << " " << site.coord(1) << " " << site.coord(2) << "; " << matIdx << "+" << endl;
+      jonnyMorris = true;
     }
 
     LATfield2::Site tempSite(site);
     tempSite = tempSite-dir1;
     if (tHooftLineCheck(field, tempSite, dir2)) {
       tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir1, false);
+      // cout << site.coord(0) << " " << site.coord(1) << " " << site.coord(2) << "; " << matIdx << "-" << endl;
+      jonnyMorris = true;
     }
 
     tempSite = tempSite+dir1-dir2;
     if (tHooftLineCheck(field, tempSite, dir1)) {
       tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir2, false);
+      // cout << site.coord(0) << " " << site.coord(1) << " " << site.coord(2) << "; " << matIdx << "-" << endl;
+       jonnyMorris = true;
     }
 
     return tHooftDerivMat;
+  }
+
+    monsta::Matrix GeorgiGlashowSu2EomTheory::getTHooftHinge(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const
+  {
+    int dir1 = (matIdx + 1) % 3;
+    int dir2 = (matIdx + 2) % 3;
+    int derivIdx = site.index();
+
+    Matrix tHooftHingeMat(2);
+
+
+    if (tHooftLineCheck(field, site, dir2)) {
+      tHooftHingeMat = tHooftHingeMat - 128*getDblPlaquetteDeriv4(field, site, matIdx, dir1, true, dir1, false);
+      tHooftHingeMat = tHooftHingeMat + 96*Matrix(field, site, matIdx);
+    }
+    if (tHooftLineCheck(field, site, dir1)) {
+      tHooftHingeMat = tHooftHingeMat - 128*getDblPlaquetteDeriv4(field, site, matIdx, dir2, true, dir2, false);
+      tHooftHingeMat = tHooftHingeMat + 96*Matrix(field, site, matIdx);
+    }
+
+    LATfield2::Site tempSite(site);
+    tempSite = tempSite-dir1;
+    if (tHooftLineCheck(field, tempSite, dir2)) {
+      tHooftHingeMat = tHooftHingeMat - 128*getDblPlaquetteDeriv4(field, site, matIdx, dir1, false, dir1, true);
+      tHooftHingeMat = tHooftHingeMat + 96*Matrix(field, site, matIdx);
+    }
+
+    tempSite = tempSite+dir1-dir2;
+    if (tHooftLineCheck(field, tempSite, dir1)) {
+      tHooftHingeMat = tHooftHingeMat - 128*getDblPlaquetteDeriv4(field, site, matIdx, dir2, false, dir2, true);
+      tHooftHingeMat = tHooftHingeMat + 96*Matrix(field, site, matIdx);
+    }
+
+
+    return tHooftHingeMat;
   }
 
   void GeorgiGlashowSu2EomTheory::postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const
@@ -458,27 +537,15 @@ namespace monsta {
 
   void GeorgiGlashowSu2EomTheory::applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const
   {
-    if (boundaryConditions_[0] == 0 && boundaryConditions_[1] == 0 && boundaryConditions_[2] == 0)
-    {
-      applyDirichletBoundaryConditions(field);
-      return;
-    }
-    field.updateHalo();
-    field.updateHalo();
-    // if (boundaryConditions_[0] == -1 && boundaryConditions_[1] == -1 && boundaryConditions_[2] == -1)
+    // if (boundaryConditions_[0] == 0 && boundaryConditions_[1] == 0 && boundaryConditions_[2] == 0)
     // {
-    //   for (int dir = 0; dir < 3; dir++)
-    //   {
-    //     applyTwistedBoundaryConditions(field, dir);
-    //     return;
-    //   }
+    //   applyDirichletBoundaryConditions(field);
+    //   return;
     // }
+    field.updateHalo();
     for (int dir = 0; dir < 3; dir++)
     {
-      if (boundaryConditions_[dir] == -1)
-      {
-        applyCPeriodicBoundaryConditions(field, dir);
-      }
+      applyCPeriodicBoundaryConditions(field, dir);
     }
   }
 
@@ -539,48 +606,45 @@ namespace monsta {
       {
         for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++) // Apply C-periodic boundary conditions
         {
+          int pauliMatNum = boundaryConditions_[dir];
           Matrix boundaryMat(field, site, matIdx);
           if (matIdx < 3)
           {
-            boundaryMat = pauli2*boundaryMat*pauli2;
-          }
-          field(site, matIdx, 0, 0) = boundaryMat(0, 0);
-          field(site, matIdx, 0, 1) = boundaryMat(0, 1);
-          field(site, matIdx, 1, 0) = boundaryMat(1, 0);
-          field(site, matIdx, 1, 1) = boundaryMat(1, 1);
-        }
-      }
-    }
-  }
-
-  void GeorgiGlashowSu2EomTheory::applyTwistedBoundaryConditions(LATfield2::Field< std::complex<double> > &field, int dir) const
-  {
-    LATfield2::Site site(field.lattice());
-
-    for (site.haloFirst(); site.haloTest(); site.haloNext())
-    {
-      int coord = site.coord(dir);
-      int maxCoord = field.lattice().size(dir) - 1;
-      if (coord < 0 || coord > maxCoord)
-      {
-        for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++) // Apply C-periodic boundary conditions
-        {
-          Matrix boundaryMat(field, site, matIdx);
-          if (matIdx < 3)
-          {
-            switch(dir)
+            switch(pauliMatNum)
             {
               case 0:
-                boundaryMat = pauli1*boundaryMat*pauli1;
                 break;
               case 1:
-                boundaryMat = pauli2*boundaryMat*pauli2;
+                boundaryMat = pauli1*boundaryMat*pauli1;
                 break;
               case 2:
+                boundaryMat = pauli2*boundaryMat*pauli2;
+                break;
+              case 3:
                 boundaryMat = pauli3*boundaryMat*pauli3;
                 break;
             }
+            if (tHooftLine_ && dir == 2 && site.coord(1) == 0)
+            {
+              if (matIdx == 1)
+              {
+                boundaryMat = -1.0*boundaryMat;
+              }
+            }
           }
+          else
+          {
+            if (pauliMatNum == 0) { break; }
+            if (pauliMatNum == 3)
+            {
+              boundaryMat(0,0) = -1.0*boundaryMat(0,0);
+            }
+            else
+            {
+              boundaryMat(0,0) = boundaryMat(0,0);
+            }
+          }
+
           field(site, matIdx, 0, 0) = boundaryMat(0, 0);
           field(site, matIdx, 0, 1) = boundaryMat(0, 1);
           field(site, matIdx, 1, 0) = boundaryMat(1, 0);
@@ -708,6 +772,7 @@ namespace monsta {
   {
     LATfield2::Site tempSite(site);
     monsta::Matrix staple = getDirectedLink(field, site, dir2, isPos2);
+    // staple.print();
 
     tempSite = isPos2 ? tempSite + dir2 : tempSite - dir2;
     staple = staple*Matrix(field, tempSite, dir1);
@@ -978,18 +1043,18 @@ namespace monsta {
 
   bool GeorgiGlashowSu2EomTheory::tHooftLineCheck(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const
   {
-    if (!tHooftLine_) { return false; }
-    int xCoord = site.coord(0);
-    int yCoord = site.coord(1);
-    int zCoord = site.coord(2);
-    int xSize = field.lattice().size(0);
-    int ySize = field.lattice().size(1);
-    int zSize = field.lattice().size(2);
+    // if (!tHooftLine_) { return false; }
+    // int xCoord = site.coord(0);
+    // int yCoord = site.coord(1);
+    // int zCoord = site.coord(2);
+    // int xSize = field.lattice().size(0);
+    // int ySize = field.lattice().size(1);
+    // int zSize = field.lattice().size(2);
 
-    if (dir == 0 && yCoord == ySize/2 && zCoord == zSize/2)
-    {
-      return true;
-    }
+    // if (dir == 0 && yCoord == ySize/2 && zCoord == zSize/2)
+    // {
+    //   return true;
+    // }
 
     return false;
   }
