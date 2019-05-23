@@ -3,9 +3,11 @@
 #include "../src/GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "../src/GeorgiGlashowSu2EomTheory.hpp"
 #include "../src/Matrix.hpp"
-#include "../src/GradDescentSolverBBStep.hpp"
+#include "../src/GradDescentSolverBBStepNoCheckerboard.hpp"
 #include "../src/Su2Tools.hpp"
 #include "../src/TheoryChecker.hpp"
+#include "../src/MonopoleFileTools.hpp"
+#include "../src/MonopoleFieldTools.hpp"
 #include <iostream>
 #include <fstream>
 #include <ctime>
@@ -42,7 +44,7 @@ int main(int argc, char **argv)
 
   parallel.initialize(n,m);
 
-  srand(1);//time(NULL) + parallel.rank());
+  srand(time(NULL) + parallel.rank());
 
   int dim = 3;
   int latSize[dim] = {sz, sz, sz};
@@ -52,7 +54,7 @@ int main(int argc, char **argv)
   int numCols = 2;
 
   double gaugeCoupling = 1;
-  double vev = 1;//sqrt(10);
+  double vev = 1;
   double selfCoupling = 1;
 
   LATfield2::Lattice lattice(dim, latSize, haloSize);
@@ -61,88 +63,137 @@ int main(int argc, char **argv)
 
   LATfield2::Site site(lattice);
 
-  for (site.first(); site.test(); site.next())
-  {
-    int xCoord = site.coord(0);
-    int yCoord = site.coord(1);
-    int zCoord = site.coord(2);
-    double r = sqrt(pow(xCoord - sz/2, 2) + pow(yCoord - sz/2, 2) + pow(zCoord - sz/2, 2));
-    for (int ii = 0; ii < numMatrices - 1; ii++)
-    {
-      // monsta::Matrix su2Mat = monsta::vecToSu2({0, 0, 0});
-      monsta::Matrix su2Mat = monsta::vecToSu2({double(rand() % 10), double(rand() % 10), double(rand() % 10)});
-      // monsta::Matrix su2Mat = monsta::vecToSu2({1, 1, 1});
-      field(site, ii, 0, 0) = su2Mat(0, 0);
-      field(site, ii, 0, 1) = su2Mat(0, 1);
-      field(site, ii, 1, 0) = su2Mat(1, 0);
-      field(site, ii, 1, 1) = su2Mat(1, 1);
-    }
-    field(site, 3, 0, 0) = double(rand() % 10);
-    field(site, 3, 0, 1) = 0;
-    field(site, 3, 1, 0) = 0;
-    field(site, 3, 1, 1) = 0;
-  }
-
   double initialStep = 0.001;
-  double maxStepSize = 0.05;
+  double maxStepSize = 0.05/vev;
   double tol = 1e-6;
   int maxNumSteps = 10000;
 
-  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {1,1,1}, false);
-  monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {1,1,1}, false);
+  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {2, 0, 0}, true);
+  monsta::setSingleMonopoleInitialConditions(field, theory);
+  // monsta::readRawField(field, outputPath + "/singleMonopoleData/rawData");
+  // theory.applyBoundaryConditions(field);
 
-  eomTheory.applyBoundaryConditions(field);
 
-  ofstream fileStream;
-  fileStream.open("mathematicaInput.txt");
-
-  fileStream << "{";
-  for (site.first(); site.test(); site.next())
-  {
-    for (int ii = 0; ii < numMatrices - 1; ii++)
-    {
-      fileStream << "u[{" << site.coord(0) << "," << site.coord(1) << "," << site.coord(2) << "}," << ii << "] -> {{";
-      fileStream << field(site, ii, 0, 0).real() << (field(site, ii, 0, 0).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 0, 0).imag()) << "I,";
-      fileStream << field(site, ii, 0, 1).real() << (field(site, ii, 0, 1).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 0, 1).imag()) << "I} , {";
-      fileStream << field(site, ii, 1, 0).real() << (field(site, ii, 1, 0).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 1, 0).imag()) << "I,";
-      fileStream << field(site, ii, 1, 1).real() << (field(site, ii, 1, 1).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 1, 1).imag()) << "I}},";
-      fileStream << endl;
-    }
-  }
-
-  for (site.haloFirst(); site.haloTest(); site.haloNext())
-  {
-    for (int ii = 0; ii < numMatrices - 1; ii++)
-    {
-      fileStream << "u[{" << site.coord(0) << "," << site.coord(1) << "," << site.coord(2) << "}," << ii << "] -> {{";
-      fileStream << field(site, ii, 0, 0).real() << (field(site, ii, 0, 0).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 0, 0).imag()) << "I,";
-      fileStream << field(site, ii, 0, 1).real() << (field(site, ii, 0, 1).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 0, 1).imag()) << "I} , {";
-      fileStream << field(site, ii, 1, 0).real() << (field(site, ii, 1, 0).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 1, 0).imag()) << "I,";
-      fileStream << field(site, ii, 1, 1).real() << (field(site, ii, 1, 1).imag() < 0.0 ? "-" : "+") << std::abs(field(site, ii, 1, 1).imag()) << "I}},";
-      fileStream << endl;
-    }
-  }
-
-  for (site.first(); site.test(); site.next())
-  {
-    fileStream << "p[{" << site.coord(0) << "," << site.coord(1) << "," << site.coord(2) << "}] -> ";
-    fileStream << real(field(site, 3, 0, 0)) << "PauliMatrix[3]," << endl;
-  }
-  for (site.haloFirst(); site.haloTest(); site.haloNext())
-  {
-    fileStream << "p[{" << site.coord(0) << "," << site.coord(1) << "," << site.coord(2) << "}] -> ";
-    fileStream << real(field(site, 3, 0, 0)) << "PauliMatrix[3]," << endl;
-  }
-  fileStream << "}";
-
-  monsta::TheoryChecker checker(tol);
-  checker.checkGradients(eomTheory, field);
+  // monsta::TheoryChecker checker(tol);
+  // checker.checkGradients(eomTheory, field);
 
   // site.setCoord(0,0,0);
   // cout << eomTheory.getLocalEnergyDensity(field, site) << endl;
 
-  double E = eomTheory.computeEnergy(field);
-  COUT << E << endl;
+  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
+  solver.solve(theory, field);
+
+  // cout << eomTheory.computeEnergy(field) << endl;
+  // double E = theory.computeEnergy(field);
+  // COUT << E << endl;
+
+  LATfield2::Field<complex<double> > centredField(lattice, numMatrices, numRows, numCols, 0);
+  std::vector<int> monopolePos = monsta::findMonopoleUnitary(field);
+  int shiftNum = ((sz/2 - 1 - monopolePos[0]) + sz) % sz;
+  monsta::circShift(field, centredField, theory, shiftNum, 0, true);
+
+  monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, true);
+  monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, true);
+  LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
+  // monsta::readRawField(pairField, outputPath + "/rawData");
+
+  // for (int sep = 2; sep < sz - 2; sep++)
+  // {
+  //   monsta::setPairInitialConds(field, pairField, periodicTheory, sep);
+  //   solver.solve(periodicTheory, pairField);
+  //   monsta::oneFlux(pairField, periodicTheory);
+  //   solver.solve(periodicTheory, pairField);
+  //   double E = periodicTheory.computeEnergy(pairField);
+  //   if (parallel.rank() == 1)
+  //   {
+  //     ofstream fileStream;
+  //     fileStream.open(outputPath + "/energies.txt", std::ios_base::app);
+  //     fileStream << E << endl;
+  //     fileStream.close();
+  //   }
+  // }
+
+  monsta::setPairInitialConds(field, pairField, periodicTheory, 4);
+  // monsta::oneFlux(pairField, periodicTheory);
+  // monsta::readRawField(pairField, outputPath + "/rawData");
+  periodicTheory.applyBoundaryConditions(pairField);
+
+  solver.setParams(tol, maxNumSteps, initialStep, maxStepSize);
+  // solver.setParams(1e-4, maxNumSteps, 0.0005, 0.005);
+  // monsta::scaleVev(pairField, periodicTheory);
+  solver.solve(periodicTheory, pairField);
+
+
+  double gradSum = eomTheory.computeEnergy(pairField);
+  COUT << gradSum << endl;
+
+
+  // double gradSq = eomTheory.computeEnergy(pairField);
+  // double gradSqOld = 1e6;
+
+  // solver.setParams(0.01, 1, initialStep, maxStepSize);
+
+  // while (gradSq < gradSqOld)
+  // {
+  //   gradSqOld = gradSq;
+  //   solver.solve(periodicTheory, pairField);
+  //   gradSq = eomTheory.computeEnergy(pairField);
+  //   COUT << gradSq << endl;
+  // }
+
+  // solver.setParams(1e-6, maxNumSteps, maxStepSize, initialStep);
+  // solver.solve(periodicTheory, pairField);
+
+  // eomTheory.applyBoundaryConditions(field);
+  // double gradSum = eomTheory.computeEnergy(field); 
+  // COUT << gradSum << endl;
+
+  int minSteps = 10;
+  solver.setParams(tol, maxNumSteps, initialStep, maxStepSize);
+
+  // periodicTheory.applyBoundaryConditions(pairField);
+  // solver.solve(periodicTheory, pairField);
+  // double gradSum = eomTheory.computeEnergy(pairField); 
+  // COUT << gradSum << endl;
+
+  // for(site.first(); site.test(); site.next())
+  // {
+  //   for (int ii = 0; ii < 3; ii++)
+  //   {
+  //     field(site, ii, 0, 0) = 1;
+  //     field(site, ii, 1, 1) = 1;
+  //   }
+  //   field(site, 3, 0, 0) = vev/sqrt(2);
+  //   // COUT << real(selfCoupling*pow(2.0*pow(field(site, 3, 0, 0),2) - pow(vev, 2),2)) << endl;
+  // }
+  // for(site.first(); site.test(); site.next())
+  // {
+  //   // cout << periodicTheory.getLocalEnergyDensity(field, site) << endl;
+  // }
+
+  double pi = 4*std::atan(1);
+  double extFieldStrength = 2*pi/pow(sz,1);
+  // periodicTheory.applyBoundaryConditions(field);
+  // monsta::setConstantMagneticFieldUnitary(pairField, periodicTheory, 0, 0);
+  // monsta::addMagneticFieldUnitary(pairField, periodicTheory, extFieldStrength, 0);
+  // monsta::oneFlux(pairField, periodicTheory);
+  // // double E = eomTheory.computeEnergy(field);
+  // // COUT << E << endl;
+  // solver.solve(periodicTheory, pairField);
+  // solver.solve(periodicTheory, pairField);
+
+  // solver.setParams(1e-4, maxNumSteps, 0.0001, 0.001, minSteps);
+  // solver.solve(eomTheory, pairField);
+
+  monsta::writeCoords(pairField, outputPath + "/coords");
+  monsta::writeHiggsFieldUnitary(pairField, outputPath + "/higgsData");
+  monsta::writeMagneticField(pairField, outputPath + "/magneticFieldData", periodicTheory);
+  monsta::writeEnergyDensity(pairField, outputPath + "/energyData", periodicTheory);
+  monsta::writeUnitaryGaugeField(pairField, outputPath + "/gaugeData");
+  // monsta::writeRawField(pairField, outputPath + "/rawData");
+
+  // double E = periodicTheory.computeEnergy(pairField);
+  // COUT << E << endl;
 
   clock_t end = clock();
   // COUT << double(end - begin) / CLOCKS_PER_SEC << endl;
