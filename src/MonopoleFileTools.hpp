@@ -39,6 +39,52 @@ namespace monsta
     }
   }
 
+  void writeRawField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
+  {
+    ofstream fileStream;
+    std::string fileName = getFileName(fileBaseName);
+    fileStream.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+
+    for (site.first(); site.test(); site.next())
+    {
+      for (int cpt = 0; cpt < field.components(); cpt++)
+      {
+        fileStream << field(site, cpt) << std::endl;
+      }
+    }
+    fileStream.close();
+    parallel.barrier();
+
+    // mergeFiles(fileBaseName);
+  }
+
+  void readRawField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
+  {
+    ifstream fileToRead;
+    std::string fileName = getFileName(fileBaseName);
+    fileToRead.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+    std::string line;
+
+    for (site.first(); site.test(); site.next())
+    {
+      for (int cpt = 0; cpt < field.components(); cpt++)
+      {
+        std::getline(fileToRead, line);
+        std::istringstream lineStream(line);
+        std::complex<double> value;
+        lineStream >> value;
+        field(site, cpt) = value;
+      }
+    }
+
+    fileToRead.close();
+    parallel.barrier();
+  }
+
   void writeCoords(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
   {
     ofstream fileStream;
