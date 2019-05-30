@@ -12,10 +12,11 @@ namespace monsta
 
   bool su2Check(monsta::Matrix mat)
   {
-    double zeroTol = 1e-15;
+    double zeroTol = 1e-5;
     std::complex<double> determinant = mat(0,0)*mat(1,1) - mat(0,1)*mat(1,0);
     if (abs(abs(determinant) - 1.0) > zeroTol)
     {
+      cout << abs(determinant) - 1.0 << endl;
       return false;
     }
     monsta::Matrix hcProduct = mat*monsta::conjugateTranspose(mat);
@@ -98,7 +99,13 @@ namespace monsta
     }
     std::vector<double> outputVec(3);
 
+    double zeroTol = 1e-15;
+
     double cosVecNorm = 0.5*real(trace(mat));
+    if (abs(pow(cosVecNorm,2) - 1) < zeroTol)
+    {
+      return outputVec;
+    }
     double vecNorm = acos(cosVecNorm);
 
     outputVec[0] = 0.5 * vecNorm/sin(vecNorm) * imag(trace(mat*pauli1));
