@@ -105,21 +105,7 @@ namespace monsta
         monsta::Matrix matrixTo(inputField, siteFrom, ii);
         if (ii < 3 && chargeConjugate && siteTo.coord(dir) < numShifts)
         {
-          monsta::Matrix conjMat(2);
-          if (dir == 0) {
-            conjMat = pauli1;
-          }
-          if (dir == 1) {
-            conjMat = pauli2;
-          }
-          if (dir == 2) {
-            conjMat = pauli3;
-          }
-          matrixTo = conjMat*matrixTo*conjMat;
-          if (ii == 3 && dir == 2)
-          {
-            matrixTo(0,0) = -1.0*matrixTo(0,0);
-          }
+          matrixTo = pauli2*matrixTo*pauli2;
         }
         // matrixTo.print();
         outputField(siteTo, ii, 0, 0) = matrixTo(0, 0);
@@ -171,7 +157,7 @@ namespace monsta
         monsta::Matrix matrixTo(singlePoleField, siteFrom, ii);
         if (chargeConjugate && ii != 3)
         {
-          matrixTo = monsta::pauli1*matrixTo*monsta::pauli1;
+          matrixTo = monsta::pauli2*matrixTo*monsta::pauli2;
         }
         pairField(siteTo, ii, 0, 0) = matrixTo(0, 0);
         pairField(siteTo, ii, 0, 1) = matrixTo(0, 1);
@@ -183,6 +169,88 @@ namespace monsta
   pairField.updateHalo();
   theory.applyBoundaryConditions(pairField);
   }
+
+void linearSuperpose(LATfield2::Field< std::complex<double> > &field1,
+  LATfield2::Field< std::complex<double> > &field2,
+  LATfield2::Field< std::complex<double> > &outputField,
+  monsta::Theory &theory)
+{
+  LATfield2::Site site(outputField.lattice());
+
+  for (site.first(); site.test(); site.next())
+  {
+    for (int ii = 0; ii < 3; ii++)
+    {
+      std::vector<double> su2Vec1 = su2ToVec(Matrix(field1, site, ii));
+      std::vector<double> su2Vec2 = su2ToVec(Matrix(field2, site, ii));
+      std::vector<double> outputVec(3);
+
+      for (int jj = 0; jj < 3; jj++)
+      {
+        outputVec[jj] = su2Vec1[jj] + su2Vec2[jj];
+      }
+
+      Matrix outputMat = vecToSu2(outputVec);
+
+      outputField(site, ii, 0, 0) = outputMat(0, 0);
+      outputField(site, ii, 0, 1) = outputMat(0, 1);
+      outputField(site, ii, 1, 0) = outputMat(1, 0);
+      outputField(site, ii, 1, 1) = outputMat(1, 1);
+    }
+
+    outputField(site, 3, 0, 0) = 0.5*(field1(site, 3, 0, 0) + field2(site, 3, 0, 0));
+  }
+
+  theory.applyBoundaryConditions(outputField);
+}
+
+void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleField,
+  LATfield2::Field< std::complex<double> > &pairField, monsta::Theory &theory, int separation)
+{
+  LATfield2::Site site(singlePoleField.lattice());
+
+  int numRows = singlePoleField.rows();
+  int numCols = singlePoleField.cols();
+  int numMatrices = singlePoleField.components() / (numRows * numCols);
+
+  LATfield2::Field< std::complex<double> > leftField(singlePoleField.lattice(), numMatrices, numRows, numCols, 0);
+  LATfield2::Field< std::complex<double> > rightField(singlePoleField.lattice(), numMatrices, numRows, numCols, 0);
+
+  std::vector<int> monopolePos = monsta::findMonopoleUnitary(singlePoleField);
+  int xSize = singlePoleField.lattice().size(0);
+  int desiredLeftPos = xSize/2 - (separation + 1)/2;
+  int desiredRightPos = xSize/2 + separation/2;
+  int shiftNumLeft = ((desiredLeftPos - monopolePos[0]) + xSize) % xSize;
+  COUT << monopolePos[0] << endl;
+  COUT << desiredLeftPos << endl;
+  int shiftNumRight = ((desiredRightPos - monopolePos[0]) + xSize) % xSize;
+  COUT << desiredRightPos << endl;
+
+  circShift(singlePoleField, leftField, theory, shiftNumLeft, 0, true);
+  circShift(singlePoleField, rightField, theory, shiftNumRight, 0, true);
+
+
+  if (monopolePos[0] < desiredLeftPos || monopolePos[0] > desiredRightPos)
+  {
+    COUT << "jonnyMorris" << endl;
+    for (site.first(); site.test(); site.next())
+    {
+
+      for (int ii = 0; ii < 3; ii++)
+      {
+        Matrix conjMat(rightField, site, ii);
+        conjMat = pauli2*conjMat*pauli2;
+
+        rightField(site, ii, 0, 0) = conjMat(0, 0);
+        rightField(site, ii, 0, 1) = conjMat(0, 1);
+        rightField(site, ii, 1, 0) = conjMat(1, 0);
+        rightField(site, ii, 1, 1) = conjMat(1, 1);
+      }
+    }
+  }
+
+  linearSuperpose(leftField, rightField, pairField, theory);
+}
 
   void contractPair(LATfield2::Field< std::complex<double> > &pairField,
     LATfield2::Field< std::complex<double> > &contractedField, monsta::Theory &theory)
@@ -431,7 +499,8 @@ namespace monsta
     theory.applyBoundaryConditions(field);
   }
 
-void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
+void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory,
+  int fluxQuanta)
   {
 
     LATfield2::Site site(field.lattice());
@@ -442,7 +511,8 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
     int zSize = field.lattice().size(2);
 
     double pi = 4*std::atan(1);
-    double flux = 4*pi;
+    double flux = fluxQuanta*4*pi;
+    int fluxSign = fluxQuanta == 0 ? 0 : fluxQuanta / abs(fluxQuanta);
 
     for (site.first(); site.test(); site.next())
     {
@@ -458,7 +528,7 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
           su2Vec[2] += 0.5*flux/pow(ySize,2)*(yCoord - 0.5);
           if (yCoord > 0)
           {
-            su2Vec[2] -= 2*pi/ySize;
+            su2Vec[2] -= fluxQuanta*2*pi/ySize;
           }
         }
         if (ii == 1 && yCoord == 0)
@@ -466,6 +536,10 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
           su2Vec[2] -= 0.5*zCoord*flux/zSize;
         }
         monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
+        if (abs(su2Mat(0,0)) + 1 == abs(su2Mat(0,0)))
+        {
+          cout << su2Vec[0] << su2Vec[1] << su2Vec[2] << endl;
+        }
         field(site, ii, 0, 0) = su2Mat(0, 0);
         field(site, ii, 0, 1) = su2Mat(0, 1);
         field(site, ii, 1, 0) = su2Mat(1, 0);
