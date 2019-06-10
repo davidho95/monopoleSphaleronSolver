@@ -162,7 +162,7 @@ namespace monsta {
         grad = grad + kineticDerivMat;
 
         // Derivative of Higgs Potential
-        Matrix higgsPotentialDeriv = 8.0*selfCoupling_*(trace(scalarMat*scalarMat) - pow(vev_, 2))*scalarMat;
+        Matrix higgsPotentialDeriv = 8.0*0.5*selfCoupling_*(trace(scalarMat*scalarMat) - pow(vev_, 2))*scalarMat;
         grad = grad + higgsPotentialDeriv;
 
         E += real(trace(grad*grad));
@@ -278,7 +278,7 @@ namespace monsta {
       grad = grad - 8*2.0
         *covDerivSum*gaugeMat*scalarMatShifted*conjugateTranspose(gaugeMat)*covDerivSum*gaugeMat*scalarMatShifted;
 
-              // Square of scalar derivative term
+        // Square of scalar derivative term
         Matrix fwdBwdCovDerivSum = getFwdBwdCovDerivSum(field, site);
         Matrix fwdBwdCovDerivSumShifted = getFwdBwdCovDerivSum(field, siteShifted);
         grad = grad + 16*fwdBwdCovDerivSum*gaugeMat*scalarMatShifted;
@@ -286,13 +286,13 @@ namespace monsta {
         grad = grad - 16*gaugeMat*fwdBwdCovDerivSumShifted*scalarMatShifted;
         grad = grad + 16*scalarMat*gaugeMat*fwdBwdCovDerivSumShifted;
 
-        // // Cross terms in scalar deriv term
+        // Cross terms in scalar deriv term
         double vevDistance = getVevDistance(field, site);
         double vevDistanceShifted = getVevDistance(field, siteShifted);
 
-        grad = grad + 128*selfCoupling_*vevDistanceShifted*gaugeMat*scalarMatShifted*scalarMatShifted;
-        grad = grad - 64*selfCoupling_*vevDistance*scalarMat*gaugeMat*scalarMatShifted;
-        grad = grad - 64*selfCoupling_*vevDistanceShifted*scalarMat*gaugeMat*scalarMatShifted;
+        grad = grad + 128*0.5*selfCoupling_*vevDistanceShifted*gaugeMat*scalarMatShifted*scalarMatShifted;
+        grad = grad - 64*0.5*selfCoupling_*vevDistance*scalarMat*gaugeMat*scalarMatShifted;
+        grad = grad - 64*0.5*selfCoupling_*vevDistanceShifted*scalarMat*gaugeMat*scalarMatShifted;
     }
     else
     {
@@ -397,7 +397,7 @@ namespace monsta {
       Matrix gradMat14(2);
       gradMat14 = gradMat14 - 32*vevDistanceShiftedBwd*conjugateTranspose(gaugeMatShiftedBwd)*scalarMatShiftedBwd*gaugeMatShiftedBwd;
       gradMat14 = gradMat14 - 32*vevDistanceShiftedFwd*gaugeMat*scalarMatShiftedFwd*conjugateTranspose(gaugeMat);
-      grad(0,0) = grad(0,0) + 2.0*selfCoupling_*gradMat14(0,0);
+      grad(0,0) = grad(0,0) + 2.0*0.5*selfCoupling_*gradMat14(0,0);
 
       }
 
@@ -408,12 +408,12 @@ namespace monsta {
       gradMat15 = gradMat15 - 32*real(trace(fwdBwdCovDerivSum*scalarMat))*scalarMat;
       gradMat15 = gradMat15 - 32*vevDistance*fwdBwdCovDerivSum;
       gradMat15 = gradMat15 + 192*vevDistance*scalarMat;
-      grad(0,0) = grad(0,0) + 2.0*selfCoupling_*gradMat15(0,0);
+      grad(0,0) = grad(0,0) + 2.0*0.5*selfCoupling_*gradMat15(0,0);
 
       double trSq = real(trace(scalarMat*scalarMat));
       Matrix gradMat16(2);
-      gradMat16 = gradMat16 + 256*pow(selfCoupling_,2)*vevDistance*trSq*scalarMat;
-      gradMat16 = gradMat16 + 128*pow(selfCoupling_,2)*pow(vevDistance, 2)*scalarMat;
+      gradMat16 = gradMat16 + 256*pow(0.5*selfCoupling_,2)*vevDistance*trSq*scalarMat;
+      gradMat16 = gradMat16 + 128*pow(0.5*selfCoupling_,2)*pow(vevDistance, 2)*scalarMat;
       grad(0,0) = grad(0,0) + 2.0*gradMat16(0,0);
 
     }
