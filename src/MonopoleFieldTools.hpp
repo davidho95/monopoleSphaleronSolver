@@ -11,34 +11,68 @@
 
 namespace monsta
 {
-  std::vector<int> findMonopole(LATfield2::Field< std::complex<double> > &field)
+  // std::vector<int> findMonopole(LATfield2::Field< std::complex<double> > &field)
+  // {
+  //   LATfield2::Site site(field.lattice());
+  //   std::vector<double> higgsVec;
+  //   double minHiggsNorm = 1e10;
+  //   int monopoleX = -1;
+  //   int monopoleY = -1;
+  //   int monopoleZ = -1;
+
+  //   for (site.first(); site.test(); site.next())
+  //   {
+  //     higgsVec = su2LieAlgToVec(Matrix(field, site, 3));
+  //     double higgsNorm = sqrt(pow(higgsVec[0], 2) + pow(higgsVec[1], 2) + pow(higgsVec[2], 2));
+  //     if (higgsNorm < minHiggsNorm)
+  //     {
+  //       minHiggsNorm = higgsNorm;
+  //     }
+  //   }
+  //   parallel.min(minHiggsNorm);
+  //   for (site.first(); site.test(); site.next())
+  //   {
+  //     higgsVec = su2LieAlgToVec(Matrix(field, site, 3));
+  //     double higgsNorm = sqrt(pow(higgsVec[0], 2) + pow(higgsVec[1], 2) + pow(higgsVec[2], 2));
+  //     if (higgsNorm == minHiggsNorm)
+  //     {
+  //       monopoleX = site.coord(0);
+  //       monopoleY = site.coord(1);
+  //       monopoleZ = site.coord(2);
+  //     }
+  //   }
+  //   parallel.max(monopoleX);
+  //   parallel.max(monopoleY);
+  //   parallel.max(monopoleZ);
+
+  //   return {monopoleX, monopoleY, monopoleZ};
+  // }
+
+  std::vector<int> findMonopole(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
   {
     LATfield2::Site site(field.lattice());
-    std::vector<double> higgsVec;
-    double minHiggsNorm = 1e10;
+    LATfield2::Site shiftedSite(field.lattice());
+
+
     int monopoleX = -1;
     int monopoleY = -1;
     int monopoleZ = -1;
-
     for (site.first(); site.test(); site.next())
     {
-      higgsVec = su2LieAlgToVec(Matrix(field, site, 3));
-      double higgsNorm = sqrt(pow(higgsVec[0], 2) + pow(higgsVec[1], 2) + pow(higgsVec[2], 2));
-      if (higgsNorm < minHiggsNorm)
+      double divB = 0;
+      for (int ii = 0; ii < 3; ii++)
       {
-        minHiggsNorm = higgsNorm;
+        shiftedSite = site+ii;
+        divB += theory.getMagneticField(field, shiftedSite, ii);
+        divB -= theory.getMagneticField(field, site, ii);
       }
-    }
-    parallel.min(minHiggsNorm);
-    for (site.first(); site.test(); site.next())
-    {
-      higgsVec = su2LieAlgToVec(Matrix(field, site, 3));
-      double higgsNorm = sqrt(pow(higgsVec[0], 2) + pow(higgsVec[1], 2) + pow(higgsVec[2], 2));
-      if (higgsNorm == minHiggsNorm)
+
+      if (abs(divB) > 16*atan(1) / (theory.getGaugeCoupling()) - 1)
       {
         monopoleX = site.coord(0);
         monopoleY = site.coord(1);
         monopoleZ = site.coord(2);
+        break;
       }
     }
     parallel.max(monopoleX);
@@ -47,6 +81,7 @@ namespace monsta
 
     return {monopoleX, monopoleY, monopoleZ};
   }
+
 
   std::vector<int> findMonopoleUnitary(LATfield2::Field< std::complex<double> > &field)
   {
@@ -204,8 +239,31 @@ void linearSuperpose(LATfield2::Field< std::complex<double> > &field1,
   theory.applyBoundaryConditions(outputField);
 }
 
+void interpolateFields(LATfield2::Field< std::complex<double> > &field1,
+  LATfield2::Field< std::complex<double> > &field2,
+  LATfield2::Field< std::complex<double> > &outputField,
+  monsta::Theory &theory, double interpolant)
+{
+  LATfield2::Site site(outputField.lattice());
+
+  double maxDiff = 0;
+  for (site.first(); site.test(); site.next())
+  {
+    for (int jj = 0; jj < field1.components(); jj++)
+    {
+      outputField(site, jj) = (1 - interpolant)*field1(site, jj) + interpolant*field2(site, jj);
+    }
+    for (int ii = 0; ii < 3; ii++)
+    {
+      theory.postProcess(outputField, site, ii);
+    }
+  }
+
+  theory.applyBoundaryConditions(outputField);
+}
+
 void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleField,
-  LATfield2::Field< std::complex<double> > &pairField, monsta::Theory &theory, int separation)
+  LATfield2::Field< std::complex<double> > &pairField, monsta::GeorgiGlashowSu2Theory &theory, int separation)
 {
   LATfield2::Site site(singlePoleField.lattice());
 
@@ -216,7 +274,7 @@ void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleFi
   LATfield2::Field< std::complex<double> > leftField(singlePoleField.lattice(), numMatrices, numRows, numCols, 0);
   LATfield2::Field< std::complex<double> > rightField(singlePoleField.lattice(), numMatrices, numRows, numCols, 0);
 
-  std::vector<int> monopolePos = monsta::findMonopoleUnitary(singlePoleField);
+  std::vector<int> monopolePos = monsta::findMonopole(singlePoleField, theory);
   int xSize = singlePoleField.lattice().size(0);
   int desiredLeftPos = xSize/2 - (separation + 1)/2;
   int desiredRightPos = xSize/2 + separation/2;
@@ -327,69 +385,56 @@ void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleFi
     }
   }
 
-  void setConstantMagneticFieldUnitary(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory, double fieldVal, int dir)
+  void setVacuumField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
   {
     double vev = theory.getVev();
 
     LATfield2::Site site(field.lattice());
-    int size1 = field.lattice().size((dir + 1) % 3);
-    int size2 = field.lattice().size((dir + 2) % 3);
+
     for (site.first(); site.test(); site.next())
     {
-      int coord1 = site.coord((dir + 1) % 3);
-      int coord2 = site.coord((dir + 2) % 3);
-      for (int ii = 0; ii < 3; ii++)
+      for (int matIdx = 0; matIdx < 3; matIdx++)
       {
-        std::vector<double> su2Vec = {0, 0, 0};
-        if (ii == (dir + 2) % 3)
-        {
-          // su2Mat = monsta::vecToSu2({0,0,0.5*(coord1 - size1 / 2)*fieldVal});
-        }
-        if (ii == (dir + 1) % 3)
-        {
-          su2Vec[2] -= 0.5*(coord2)*fieldVal;
-          // su2Mat = monsta::vecToSu2({0,0,-0.5*(coord2 - size2 / 2)*fieldVal});
-        }
-        // if (ii == 2 && site.coord(2) == field.lattice().size(2) - 1)
-        // {
-        //   su2Vec[1] += 3.14159/2;
-        // }
-        monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
-        field(site, ii, 0, 0) = su2Mat(0, 0);
-        field(site, ii, 0, 1) = su2Mat(0, 1);
-        field(site, ii, 1, 0) = su2Mat(1, 0);
-        field(site, ii, 1, 1) = su2Mat(1, 1);
+        field(site, matIdx, 0, 0) = 1;
+        field(site, matIdx, 0, 1) = 0;
+        field(site, matIdx, 1, 0) = 0;
+        field(site, matIdx, 1, 1) = 1;
       }
       field(site, 3, 0, 0) = vev / sqrt(2);
       field(site, 3, 0, 1) = 0;
       field(site, 3, 1, 0) = 0;
       field(site, 3, 1, 1) = 0;
     }
-    // for (site.haloFirst(); site.haloTest(); site.haloNext())
-    // {
-    //   for (int ii = 0; ii < 3; ii++)
-    //   {
-    //     int coord1 = site.coord((dir + 1) % 3);
-    //     int coord2 = site.coord((dir + 2) % 3);
-    //     monsta::Matrix su2Mat = monsta::vecToSu2({0, 0, 0});
-    //     if (ii == (dir + 2) % 3)
-    //     {
-    //       // su2Mat = monsta::vecToSu2({0,0,0.5*(coord1 - size1 / 2)*fieldVal});
-    //     }
-    //     if (ii == (dir + 1) % 3)
-    //     {
-    //       su2Mat = monsta::vecToSu2({0,0,-0.5*(coord2 - size2 / 2)*fieldVal});
-    //     }
-    //     field(site, ii, 0, 0) = su2Mat(0, 0);
-    //     field(site, ii, 0, 1) = su2Mat(0, 1);
-    //     field(site, ii, 1, 0) = su2Mat(1, 0);
-    //     field(site, ii, 1, 1) = su2Mat(1, 1);
-    //   }
-    //   field(site, 3, 0, 0) = vev / sqrt(2);
-    //   field(site, 3, 0, 1) = 0;
-    //   field(site, 3, 1, 0) = 0;
-    //   field(site, 3, 1, 1) = 0;
-    // }
+    theory.applyBoundaryConditions(field);
+  }
+
+  void setRandomField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
+  {
+    double vev = theory.getVev();
+    double pi = 4*atan(1);
+
+    LATfield2::Site site(field.lattice());
+
+    for (site.first(); site.test(); site.next())
+    {
+      for (int matIdx = 0; matIdx < 3; matIdx++)
+      {
+        std::vector<double> su2Vec(3);
+        for (int ii = 0; ii < 3; ii++)
+        {
+          su2Vec.push_back(1e-5*double(rand() % 628318) - 314159);
+        }
+        Matrix su2Mat = vecToSu2(su2Vec);
+        field(site, matIdx, 0, 0) = su2Mat(0, 0);
+        field(site, matIdx, 0, 1) = su2Mat(0, 1);
+        field(site, matIdx, 1, 0) = su2Mat(1, 0);
+        field(site, matIdx, 1, 1) = su2Mat(1, 1);
+      }
+      field(site, 3, 0, 0) = 0.01*double(rand() % 100);
+      field(site, 0, 0, 1) = 0;
+      field(site, 0, 1, 0) = 0;
+      field(site, 0, 1, 1) = 0;
+    }
     theory.applyBoundaryConditions(field);
   }
 

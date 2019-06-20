@@ -85,6 +85,28 @@ namespace monsta
     parallel.barrier();
   }
 
+  void readHiggsField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
+  {
+    ifstream fileToRead;
+    std::string fileName = getFileName(fileBaseName);
+    fileToRead.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+    std::string line;
+
+    for (site.first(); site.test(); site.next())
+    {
+      std::getline(fileToRead, line);
+      std::istringstream lineStream(line);
+      std::complex<double> value;
+      lineStream >> value;
+      field(site, 3, 0, 0) = value;
+    }
+
+    fileToRead.close();
+    parallel.barrier();
+  }
+
   void writeCoords(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
   {
     ofstream fileStream;

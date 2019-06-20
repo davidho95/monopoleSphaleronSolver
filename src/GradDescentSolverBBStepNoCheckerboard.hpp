@@ -1,16 +1,16 @@
-#ifndef GRADDESCENTSOLVER_HPP
-#define GRADDESCENTSOLVER_HPP
+#ifndef GRADDESCENTSOLVERBBSTEPNOCHECKERBOARD_HPP
+#define GRADDESCENTSOLVERBBSTEPNOCHECKERBOARD_HPP
 
 #include <ctime>
 
 namespace monsta
 {
-  class GradDescentSolver
+  class GradDescentSolverNoCheckerboard
   {
   public:
-   GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize);
-    GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
-    GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps);
+   GradDescentSolverNoCheckerboard(double tol, int maxIterations, double initialStepSize, double maxStepSize);
+    GradDescentSolverNoCheckerboard(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
+    GradDescentSolverNoCheckerboard(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
@@ -37,14 +37,14 @@ namespace monsta
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory);
   };
 
-  GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize)
+  GradDescentSolverNoCheckerboard::GradDescentSolverNoCheckerboard(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize) {}
-  GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
+  GradDescentSolverNoCheckerboard::GradDescentSolverNoCheckerboard(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), skipCpts_(skipCpts) {}
-  GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps)
+  GradDescentSolverNoCheckerboard::GradDescentSolverNoCheckerboard(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), minSteps_(minSteps) {}
 
-  void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
+  void GradDescentSolverNoCheckerboard::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
     tol_ = tol;
     maxIterations_ = maxIterations;
@@ -52,7 +52,7 @@ namespace monsta
     maxStepSize_ = maxStepSize;
   }
 
-  void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
+  void GradDescentSolverNoCheckerboard::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
   {
     tol_ = tol;
     maxIterations_ = maxIterations;
@@ -61,7 +61,7 @@ namespace monsta
     skipCpts_ = skipCpts;
   }
 
-  void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps)
+  void GradDescentSolverNoCheckerboard::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps)
   {
     tol_ = tol;
     maxIterations_ = maxIterations;
@@ -70,7 +70,7 @@ namespace monsta
     minSteps_ = minSteps;
   }
 
-  void GradDescentSolver::solve(monsta::Theory &theory, LATfield2::Field< std::complex<double> > &field)
+  void GradDescentSolverNoCheckerboard::solve(monsta::Theory &theory, LATfield2::Field< std::complex<double> > &field)
   {
     energy = theory.computeEnergy(field);
     int numMatrices = field.components() / (field.rows()*field.cols());
@@ -125,7 +125,7 @@ namespace monsta
     parallel.barrier();
   }
 
-  void GradDescentSolver::iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory)
+  void GradDescentSolverNoCheckerboard::iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory)
   {
     clock_t begin = clock();
     LATfield2::Site site(field.lattice());

@@ -17,6 +17,7 @@ namespace monsta {
     double getGaugeCoupling() const { return gaugeCoupling_; }
     double getSelfCoupling() const { return selfCoupling_; }
     double getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
+    int getMonopoleNumber(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
     void postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
     void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
 
@@ -126,7 +127,6 @@ namespace monsta {
       // grad = grad - 0.5*trace(grad*conjugateTranspose(Matrix(field, site, matIdx)))*Matrix(field, site, matIdx);
 
     } else {
-      // if (abs(field(site, 3, 0, 0)) < 1e-15) { return grad; }
       for (int dir = 0; dir < 3; dir++)
       {
         // Deriviative of kinetic term
@@ -460,17 +460,62 @@ namespace monsta {
 
   }
 
+  // double GeorgiGlashowSu2Theory::getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
+  // {
+  //   int dir1 = (cpt + 1) % 3;
+  //   int dir2 = (cpt + 2) % 3;
+
+  //   monsta::Matrix plaquette = getPlaquette(field, site, dir1, dir2);
+  //   double magneticField = 2./gaugeCoupling_*arg(plaquette(0,0));
+  //   if (tHooftLineCheck(field, site, cpt))
+  //   {
+  //     magneticField = magneticField > 0 ? magneticField - 2*3.141592654 : magneticField + 2*3.141592654;
+  //   }
+  //   return (magneticField);
+  // }
+
+  // double GeorgiGlashowSu2Theory::getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
+  // {
+  //   int dir1 = (cpt + 1) % 3;
+  //   int dir2 = (cpt + 2) % 3;
+
+  //   Matrix u1Projector({1, 0, 0, 0});
+
+  //   LATfield2::Site tempSite(site);
+  //   monsta::Matrix u1Plaquette = u1Projector*Matrix(field, site, dir1)*u1Projector;
+  //   tempSite = tempSite+dir1;
+  //   u1Plaquette = u1Plaquette*u1Projector*Matrix(field, tempSite, dir2)*u1Projector;
+  //   tempSite = tempSite-dir1+dir2;
+  //   u1Plaquette = u1Plaquette*u1Projector*conjugateTranspose(Matrix(field, tempSite, dir1))*u1Projector;
+  //   tempSite = tempSite-dir2;
+  //   u1Plaquette = u1Plaquette*u1Projector*conjugateTranspose(Matrix(field, tempSite, dir2))*u1Projector;
+
+
+  //   double magneticField = 2./gaugeCoupling_*arg(u1Plaquette(0,0));
+
+  //   return (magneticField);
+  // }
+
   double GeorgiGlashowSu2Theory::getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
   {
     int dir1 = (cpt + 1) % 3;
     int dir2 = (cpt + 2) % 3;
 
-    monsta::Matrix plaquette = getPlaquette(field, site, dir1, dir2);
-    double magneticField = 2./gaugeCoupling_*arg(plaquette(0,0));
-    if (tHooftLineCheck(field, site, cpt))
-    {
-      magneticField = magneticField > 0 ? magneticField - 2*3.141592654 : magneticField + 2*3.141592654;
-    }
+
+    LATfield2::Site tempSite(site);
+    // cout << site.coord(0) << " " << site.coord(1) << " " << site.coord(2) << endl;
+    std::complex<double> u1Plaquette = field(site, dir1, 0, 0);
+    tempSite = tempSite+dir1;
+    // cout << tempSite.coord(0) << " " << tempSite.coord(1) << " " << tempSite.coord(2) << endl;
+    u1Plaquette = u1Plaquette*field(tempSite, dir2, 0, 0);
+    tempSite = tempSite-dir1+dir2;
+    // cout << tempSite.coord(0) << " " << tempSite.coord(1) << " " << tempSite.coord(2) << endl;
+    u1Plaquette = u1Plaquette*conj(field(tempSite, dir1, 0, 0));
+    tempSite = tempSite-dir2;
+    u1Plaquette = u1Plaquette*conj(field(tempSite, dir2, 0, 0));
+
+    double magneticField = 2./gaugeCoupling_*arg(u1Plaquette);
+
     return (magneticField);
   }
 
@@ -484,10 +529,10 @@ namespace monsta {
     int ySize = field.lattice().size(1);
     int zSize = field.lattice().size(2);
 
-    if (dir == 0 && yCoord == ySize/2 && zCoord == zSize/2)
-    {
-      return true;
-    }
+    // if (dir == 0 && yCoord == ySize/2 && zCoord == zSize/2)
+    // {
+    //   return true;
+    // }
     // if (dir == 1 && xCoord == xSize/2 && zCoord == zSize/2)
     // {
     //   return true;
@@ -499,6 +544,22 @@ namespace monsta {
 
 
     return false;
+  }
+
+  int GeorgiGlashowSu2Theory::getMonopoleNumber(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
+  {
+    LATfield2::Site shiftedSite(field.lattice());
+    double divB = 0;
+    double pi = 4*atan(1);
+
+    for (int dir = 0; dir < 3; dir++)
+    {
+      shiftedSite = site+dir;
+      divB += getMagneticField(field, shiftedSite, dir);
+      divB -= getMagneticField(field, site, dir);
+    }
+
+    return round(divB*gaugeCoupling_ / (4*pi));
   }
 
 }
