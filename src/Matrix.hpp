@@ -23,6 +23,7 @@ namespace monsta
     Matrix& operator*=(double scalar);
 
     void print() const;
+    void PRINT() const;
 
   private:
     int size_;
@@ -159,6 +160,20 @@ namespace monsta
   }
 
   void Matrix::print() const
+  {
+    for (int ii = 0; ii < size_; ii++)
+    {
+      for (int jj = 0; jj < size_; jj++)
+      {
+        std::complex<double> element = this->operator()(ii,jj);
+        cout << element.real() << (element.imag() < 0.0 ? "-" : "+") << std::abs(element.imag()) << "i ";
+      }
+      cout << endl;
+    }
+    cout << endl;
+  }
+
+  void Matrix::PRINT() const
   {
     for (int ii = 0; ii < size_; ii++)
     {
