@@ -2,7 +2,7 @@
 #include <complex>
 #include "../src/GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "../src/Matrix.hpp"
-#include "../src/GradDescentSolverBBStepNoCheckerboard.hpp"
+#include "../src/GradDescentSolverBBStep.hpp"
 #include "../src/Su2Tools.hpp"
 #include "../src/MonopoleFileTools.hpp"
 #include "../src/MonopoleFieldTools.hpp"
@@ -20,6 +20,11 @@ int main(int argc, char **argv)
   int sz = 16;
   int n = 2;
   int m = 2;
+  double vev = 1;
+  double gaugeCoupling = 1;
+  double selfCoupling = 1;
+  int fluxQuanta = 0;
+  int range = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -27,9 +32,6 @@ int main(int argc, char **argv)
     switch(argv[i][1]) {
       case 'p':
         outputPath = argv[++i];
-        break;
-      case 'i':
-        inputPath = argv[++i];
         break;
       case 's':
         sz =  atoi(argv[++i]);
@@ -39,6 +41,24 @@ int main(int argc, char **argv)
         break;
       case 'm':
         m = atoi(argv[++i]);
+        break;
+      case 'i':
+        inputPath = argv[++i];
+        break;
+      case 'v':
+        vev = atof(argv[++i]);
+        break;
+      case 'g':
+        gaugeCoupling = atof(argv[++i]);
+        break;
+      case 'l':
+        selfCoupling = atof(argv[++i]);
+        break;
+      case 'b':
+        fluxQuanta = atof(argv[++i]);
+        break;
+      case 'r':
+        range = atoi(argv[++i]);
         break;
     }
   }
@@ -52,10 +72,6 @@ int main(int argc, char **argv)
   int numRows = 2;
   int numCols = 2;
 
-  double gaugeCoupling = 1;
-  double vev = 1;
-  double selfCoupling = 1;
-
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
 
@@ -63,7 +79,7 @@ int main(int argc, char **argv)
 
   double initialStep = 0.001;
   double maxStepSize = 0.05/vev;
-  double tol = 1e-4;
+  double tol = 1e-3;
   int maxNumSteps = 10000;
 
   monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {2, 0, 0}, true);
@@ -74,29 +90,38 @@ int main(int argc, char **argv)
   solver.solve(theory, field);
 
   LATfield2::Field<complex<double> > centredField(lattice, numMatrices, numRows, numCols, 0);
-  std::vector<int> monopolePos = monsta::findMonopoleUnitary(field);
+  std::vector<int> monopolePos = monsta::findMonopole(field, theory);
   int shiftNum = ((sz/2 - 1 - monopolePos[0]) + sz) % sz;
   monsta::circShift(field, centredField, theory, shiftNum, 0, true);
 
-  monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, true);
+  monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
 
-  for (int sep = 0; sep < sz - 1; sep++)
+  double pi = 4*atan(1);
+  double predictedMax = round(double(sz) / sqrt(4*pi*(fluxQuanta - 0.5)));
+
+  double oldEnergy = 0;
+  bool maxReached = false;
+  for (int sep = predictedMax - range; sep <= predictedMax + range; sep++)
   {
-    monsta::setPairInitialConds(field, pairField, periodicTheory, sep);
-    // monsta::addConstantMagneticField(pairField, periodicTheory,-1);
+    monsta::setPairInitialConds2(field, pairField, periodicTheory, sep);
+    monsta::addConstantMagneticField(pairField, periodicTheory, -fluxQuanta);
     solver.solve(periodicTheory, pairField);
-    double E = periodicTheory.computeEnergy(pairField);
+    double energy = periodicTheory.computeEnergy(pairField);
     if (parallel.rank() == 1)
     {
       ofstream fileStream;
       fileStream.open(outputPath + "/energies.txt", std::ios_base::app);
-      fileStream << E << endl;
+      fileStream << energy << endl;
       fileStream.close();
     }
 
-    if (sep == sz/2)
+    if (energy < oldEnergy) { maxReached = true; }
+    oldEnergy = energy;
+
+    if (!maxReached)
     {
+      monsta::writeRawField(pairField, outputPath + "/rawData");
       monsta::writeCoords(pairField, outputPath + "/coords");
       monsta::writeHiggsFieldUnitary(pairField, outputPath + "/higgsData");
       monsta::writeMagneticField(pairField, outputPath + "/magneticFieldData", periodicTheory);
