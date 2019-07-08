@@ -93,17 +93,22 @@ namespace monsta
 
   std::vector<double> su2ToVec(monsta::Matrix mat)
   {
-    if (!su2Check(mat))
-    {
-      throw std::invalid_argument("Matrix is not an element of SU(2)");
-    }
+    // if (!su2Check(mat))
+    // {
+    //   throw std::invalid_argument("Matrix is not an element of SU(2)");
+    // }
     std::vector<double> outputVec(3);
 
     double zeroTol = 1e-15;
 
     double cosVecNorm = 0.5*real(trace(mat));
-    if (abs(pow(cosVecNorm,2) - 1) < zeroTol)
+    if (abs(cosVecNorm - 1) < zeroTol)
     {
+      return outputVec;
+    }
+    if (abs(cosVecNorm + 1) < zeroTol)
+    {
+      outputVec[2] += 4*atan(1);
       return outputVec;
     }
     double vecNorm = acos(cosVecNorm);
