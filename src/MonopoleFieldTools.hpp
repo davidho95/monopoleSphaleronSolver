@@ -11,42 +11,6 @@
 
 namespace monsta
 {
-  // std::vector<int> findMonopole(LATfield2::Field< std::complex<double> > &field)
-  // {
-  //   LATfield2::Site site(field.lattice());
-  //   std::vector<double> higgsVec;
-  //   double minHiggsNorm = 1e10;
-  //   int monopoleX = -1;
-  //   int monopoleY = -1;
-  //   int monopoleZ = -1;
-
-  //   for (site.first(); site.test(); site.next())
-  //   {
-  //     higgsVec = su2LieAlgToVec(Matrix(field, site, 3));
-  //     double higgsNorm = sqrt(pow(higgsVec[0], 2) + pow(higgsVec[1], 2) + pow(higgsVec[2], 2));
-  //     if (higgsNorm < minHiggsNorm)
-  //     {
-  //       minHiggsNorm = higgsNorm;
-  //     }
-  //   }
-  //   parallel.min(minHiggsNorm);
-  //   for (site.first(); site.test(); site.next())
-  //   {
-  //     higgsVec = su2LieAlgToVec(Matrix(field, site, 3));
-  //     double higgsNorm = sqrt(pow(higgsVec[0], 2) + pow(higgsVec[1], 2) + pow(higgsVec[2], 2));
-  //     if (higgsNorm == minHiggsNorm)
-  //     {
-  //       monopoleX = site.coord(0);
-  //       monopoleY = site.coord(1);
-  //       monopoleZ = site.coord(2);
-  //     }
-  //   }
-  //   parallel.max(monopoleX);
-  //   parallel.max(monopoleY);
-  //   parallel.max(monopoleZ);
-
-  //   return {monopoleX, monopoleY, monopoleZ};
-  // }
 
   std::vector<int> findMonopole(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
   {
@@ -73,42 +37,6 @@ namespace monsta
         monopoleY = site.coord(1);
         monopoleZ = site.coord(2);
         break;
-      }
-    }
-    parallel.max(monopoleX);
-    parallel.max(monopoleY);
-    parallel.max(monopoleZ);
-
-    return {monopoleX, monopoleY, monopoleZ};
-  }
-
-
-  std::vector<int> findMonopoleUnitary(LATfield2::Field< std::complex<double> > &field)
-  {
-    LATfield2::Site site(field.lattice());
-    std::vector<double> higgsVec;
-    double minHiggsNorm = 1e10;
-    int monopoleX = -1;
-    int monopoleY = -1;
-    int monopoleZ = -1;
-
-    for (site.first(); site.test(); site.next())
-    {
-      double higgsNorm = abs(real(field(site, 3, 0, 0)));
-      if (higgsNorm < minHiggsNorm)
-      {
-        minHiggsNorm = higgsNorm;
-      }
-    }
-    parallel.min(minHiggsNorm);
-    for (site.first(); site.test(); site.next())
-    {
-      double higgsNorm = real(field(site, 3, 0, 0));
-      if (higgsNorm == minHiggsNorm)
-      {
-        monopoleX = site.coord(0);
-        monopoleY = site.coord(1);
-        monopoleZ = site.coord(2);
       }
     }
     parallel.max(monopoleX);
@@ -358,33 +286,6 @@ void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleFi
   theory.applyBoundaryConditions(contractedField);
   }
 
-  void transferBoundary(LATfield2::Field< std::complex<double> > &inputField,
-    LATfield2::Field< std::complex<double> > &outputField)
-  {
-    LATfield2::Site site(inputField.lattice());
-    int xMax = inputField.lattice().size(0) - 1;
-    int yMax = inputField.lattice().size(1) - 1;
-    int zMax = inputField.lattice().size(2) - 1;
-
-    for (site.haloFirst(); site.haloTest(); site.haloNext())
-    {
-      int xCoord = site.coord(0);
-      int yCoord = site.coord(1);
-      int zCoord = site.coord(2);
-      if (xCoord > 0 && yCoord > 0 && zCoord > 0 && xCoord < xMax && yCoord < yMax && zCoord < zMax)
-      {
-        continue;
-      }
-      for (int ii = 0; ii < 4; ii++)
-      {
-        outputField(site, ii, 0, 0) = inputField(site, ii, 0, 0);
-        outputField(site, ii, 0, 1) = inputField(site, ii, 0, 1);
-        outputField(site, ii, 1, 0) = inputField(site, ii, 1, 0);
-        outputField(site, ii, 1, 1) = inputField(site, ii, 1, 1);
-      }
-    }
-  }
-
   void setVacuumField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
   {
     double vev = theory.getVev();
@@ -436,36 +337,6 @@ void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleFi
       field(site, 0, 1, 1) = 0;
     }
     theory.applyBoundaryConditions(field);
-  }
-
-  void scaleUpField(LATfield2::Field< std::complex<double> > &smallField, LATfield2::Field< std::complex<double> > &bigField)
-  {
-    LATfield2::Site smallSite(smallField.lattice());
-    LATfield2::Site bigSite(bigField.lattice());
-
-    int scaleFactor = 2;
-
-    int smallSize = smallField.lattice().size(0);
-    for (bigSite.first(); bigSite.test(); bigSite.next())
-    {
-      int bigXCoord = bigSite.coord(0);
-      int bigYCoord = bigSite.coord(1);
-      int bigZCoord = bigSite.coord(2);
-
-      if (bigYCoord == smallSize*scaleFactor/2 + 1 && bigZCoord == smallSize*scaleFactor/2 + 1)
-      {
-        smallSite.setCoord(bigXCoord / scaleFactor + 1, bigYCoord / scaleFactor + 1, bigZCoord / scaleFactor + 1);
-      }
-      else
-      {
-        smallSite.setCoord(bigXCoord / scaleFactor, bigYCoord / scaleFactor, bigZCoord / scaleFactor);
-      }
-
-      for (int ii = 0; ii < bigField.components(); ii++)
-      {
-        bigField(bigSite, ii) = smallField(smallSite, ii);
-      }
-    }
   }
 
   void setSingleMonopoleInitialConditions(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
@@ -617,85 +488,32 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
     theory.applyBoundaryConditions(field);
   }
 
-  void transplantMonopole(LATfield2::Field< std::complex<double> > &smallField, LATfield2::Field< std::complex<double> > &bigField)
+  double innerProduct(LATfield2::Field< std::complex<double> > &field1, LATfield2::Field< std::complex<double> > &field2)
   {
-    LATfield2::Site smallSite(smallField.lattice());
-    LATfield2::Site bigSite(bigField.lattice());
+    LATfield2::Site site(field1.lattice());
+    int numMatrices = 4;
 
-    int scaleFactor = 2;
+    double output = 0;
 
-    int smallSize = smallField.lattice().size(0);
-
-    // for (smallSite.first(); smallSite.test(); smallSite.next())
-    // {
-    //   int smallXCoord = smallSite.coord(0);
-    //   int smallYCoord = smallSite.coord(1);
-    //   int smallZCoord = smallSite.coord(2);
-
-    //   int bigXCoord;
-    //   if (smallXCoord < smallSize / 2)
-    //   {
-    //     bigXCoord = smallXCoord;
-    //   }
-    //   else
-    //   {
-    //     bigXCoord = smallXCoord + smallSize;
-    //   }
-    //   int bigYCoord = smallYCoord + smallSize / 2;
-    //   int bigZCoord = smallZCoord + smallSize / 2;
-
-    //   bigSite.setCoord(bigXCoord, bigYCoord, bigZCoord);
-    //   for (int ii = 0; ii < bigField.components(); ii++)
-    //   {
-    //     bigField(bigSite, ii) = smallField(smallSite, ii);
-    //   }
-    // }
-
-    for (bigSite.first(); bigSite.test(); bigSite.next())
+    for (site.first(); site.test(); site.next())
     {
-      int bigXCoord = bigSite.coord(0);
-      int bigYCoord = bigSite.coord(1);
-      int bigZCoord = bigSite.coord(2);
+      for (int ii = 0; ii < field1.components(); ii++)
+      {
+        output += real(field1(site, ii)*conj(field2(site, ii)));
+      }
+      // for (int matIdx = 0; matIdx < 3; matIdx++)
+      // {
+      //   Matrix gaugeMat1(field1, site, matIdx);
+      //   Matrix gaugeMat2(field2, site, matIdx);
 
-      int smallXCoord, smallYCoord, smallZCoord;
-      if (bigXCoord < smallSize / 2)
-      {
-        smallXCoord = bigXCoord; 
-      }
-      else if (bigXCoord > 3 * smallSize / 2)
-      {
-        smallXCoord = bigXCoord - (2*smallSize);
-      }
-      else
-      {
-        smallXCoord = 0;
-      }
-
-      if (bigYCoord - smallSize / 2 < 0 || bigYCoord - smallSize / 2 >= smallSize)
-      {
-        smallYCoord = bigYCoord - smallSize / 2;
-      }
-      else
-      {
-        smallYCoord = 0;
-      }
-
-      if (bigZCoord - smallSize / 2 < 0 || bigZCoord - smallSize / 2 >= smallSize)
-      {
-        smallZCoord = bigZCoord - smallSize / 2;
-      }
-      else
-      {
-        smallZCoord = 0;
-      }
-
-      smallSite.setCoord(smallXCoord, smallYCoord, smallZCoord);
-
-      for (int ii = 0; ii < bigField.components(); ii++)
-      {
-        bigField(bigSite, ii) = smallField(smallSite, ii);
-      }
+      //   output += real(trace(gaugeMat1*gaugeMat2));
+      // }
+      // Matrix scalarMat1 = field1(site, 3, 0, 0)*pauli3;
+      // Matrix scalarMat2 = field2(site, 3, 0, 0)*pauli3;
+      // output += real(trace(scalarMat1*scalarMat2));
     }
+    parallel.sum(output);
+    return output;
   }
 }
 
