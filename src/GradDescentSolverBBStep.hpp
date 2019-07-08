@@ -10,6 +10,7 @@ namespace monsta
   public:
     GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize);
     GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
+    GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
@@ -28,6 +29,7 @@ namespace monsta
     double energy;
     double energyOld;
     bool isVerbose_ = true;
+    int minSteps_ = 0;
     std::vector<int> skipCpts_;
     LATfield2::Field< std::complex<double> > oldGrads_;
 
@@ -38,6 +40,8 @@ namespace monsta
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize) {}
   GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), skipCpts_(skipCpts) {}
+    GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps)
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), minSteps_(minSteps) {}
 
   void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
@@ -68,6 +72,19 @@ namespace monsta
     relEnergyChange = (energy - energyOld);
     int numIters = 1;
 
+    while (numIters < minSteps_)
+    {
+      numIters++;
+      iterate(field, theory);
+      energyOld = energy;
+      energy = theory.computeEnergy(field);
+      relEnergyChange = (energy - energyOld);
+      if (isVerbose_)
+      {
+        COUT << energy << std::endl;
+        // COUT << maxGrad_ << std::endl;
+      }
+    }
     while (abs(relEnergyChange) > tol_ && numIters < maxIterations_)
     {
       numIters++;
