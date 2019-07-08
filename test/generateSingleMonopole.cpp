@@ -2,7 +2,7 @@
 #include <complex>
 #include "../src/GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "../src/Matrix.hpp"
-#include "../src/GradDescentSolverBBStepNoCheckerboard.hpp"
+#include "../src/GradDescentSolverBBStep.hpp"
 #include "../src/Su2Tools.hpp"
 #include "../src/MonopoleFileTools.hpp"
 #include "../src/MonopoleFieldTools.hpp"
@@ -18,6 +18,9 @@ int main(int argc, char **argv)
   int sz = 16;
   int n = 2;
   int m = 2;
+  double vev = 1;
+  double gaugeCoupling = 1;
+  double selfCoupling = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -35,6 +38,15 @@ int main(int argc, char **argv)
       case 'm':
         m = atoi(argv[++i]);
         break;
+      case 'v':
+        vev = atof(argv[++i]);
+        break;
+      case 'g':
+        gaugeCoupling = atof(argv[++i]);
+        break;
+      case 'l':
+        selfCoupling = atof(argv[++i]);
+        break;
     }
   }
 
@@ -47,17 +59,13 @@ int main(int argc, char **argv)
   int numRows = 2;
   int numCols = 2;
 
-  double gaugeCoupling = 1;
-  double vev = 1;
-  double selfCoupling = 1;
-
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
 
   LATfield2::Site site(lattice);
 
   double initialStep = 0.001;
-  double maxStepSize = 0.05/vev;
+  double maxStepSize = 0.005/(vev);
   double tol = 1e-6;
   int maxNumSteps = 10000;
 
@@ -69,4 +77,9 @@ int main(int argc, char **argv)
   solver.solve(theory, field);
 
   monsta::writeRawField(field, outputPath + "/rawData");
+  monsta::writeCoords(field, outputPath + "/coords");
+  monsta::writeHiggsFieldUnitary(field, outputPath + "/higgsData");
+  monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
+  monsta::writeEnergyDensity(field, outputPath + "/energyData", theory);
+  monsta::writeUnitaryGaugeField(field, outputPath + "/gaugeData");
 }
