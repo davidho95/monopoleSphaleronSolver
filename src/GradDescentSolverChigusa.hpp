@@ -92,7 +92,7 @@ namespace monsta
 
     if (maxGrad_ > abortGrad_)
     {
-      COUT << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
+      COUT << "Gradient descent aborted after exceeding maximum allowed gradient" << std::endl;
       // COUT << "Maximum gradient: " << maxGrad_ << std::endl;
       COUT << "Energy reached: " << finalEnergy << std::endl;
       return false;
