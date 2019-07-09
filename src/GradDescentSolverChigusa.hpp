@@ -9,7 +9,7 @@ namespace monsta
   class GradDescentSolverChigusa
   {
   public:
-    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize double correctionCoeff);
+    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, std::vector<int> skipCpts);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad);
 
