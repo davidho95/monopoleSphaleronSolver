@@ -76,6 +76,7 @@ int main(int argc, char **argv)
   double initialStep = 0.001;
   double maxStepSize = 0.05*vev*gaugeCoupling;
   double tol = 1e-4;
+  double abortGrad = 1;
   int maxNumSteps = 20000;
 
   monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize);
@@ -121,13 +122,9 @@ int main(int argc, char **argv)
   }
 
 
-  monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize);
-  // monsta::GradDescentSolverCorePreserving corePreservingSolver(tol, maxNumSteps, initialStep/100, maxStepSize);
-
-  // minimiser.solve(periodicTheory, pairField);
+  monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize, abortGrad);
   chigusaSolver.solve(periodicTheory, pairField, initialField);
-  // corePreservingSolver.solve(periodicTheory, pairField);
-
+  
   monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   double gradSq = eomTheory.computeEnergy(pairField);
   COUT << gradSq << endl;

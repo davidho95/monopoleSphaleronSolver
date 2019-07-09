@@ -11,6 +11,7 @@ namespace monsta
   public:
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
+    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double abortGrad);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
@@ -29,19 +30,19 @@ namespace monsta
     double energy;
     double energyOld;
     bool isVerbose_ = true;
-    std::vector<int> coreIndices_;
+    double abortGrad_ = 1e6;
     std::vector<int> skipCpts_;
     LATfield2::Field< std::complex<double> > oldGrads_;
 
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory, LATfield2::Field< std::complex<double> > &referenceField);
-    std::vector<int> getMonopoleNums(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, monsta::GeorgiGlashowSu2Theory &theory);
-    bool coreCheck(LATfield2::Site &site);
   };
 
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize) {}
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), skipCpts_(skipCpts) {}
+    GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double abortGrad)
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), abortGrad_(abortGrad) {}
 
   void GradDescentSolverChigusa::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
@@ -72,32 +73,7 @@ namespace monsta
     relEnergyChange = (energy - energyOld);
     int numIters = 1;
 
-    LATfield2::Site site(field.lattice());
-    for (site.first(); site.test(); site.next())
-    {
-      LATfield2::Site tempSite(field.lattice());
-      int monopoleNum = theory.getMonopoleNumber(field, site);
-      if (monopoleNum != 0)
-      {
-        coreIndices_.push_back(site.index());
-      }
-      tempSite = site + 0;
-      coreIndices_.push_back(tempSite.index());
-      tempSite = site + 1;
-      coreIndices_.push_back(tempSite.index());
-      tempSite = site + 2;
-      coreIndices_.push_back(tempSite.index());
-      tempSite = site + 0 + 1;
-      coreIndices_.push_back(tempSite.index());
-      tempSite = site + 1 + 2;
-      coreIndices_.push_back(tempSite.index());
-      tempSite = site + 2 + 0;
-      coreIndices_.push_back(tempSite.index());
-      tempSite = site + 0 + 1 + 2;
-      coreIndices_.push_back(tempSite.index());
-    }
-
-    while (maxGrad_ > tol_ && numIters < maxIterations_)
+    while (maxGrad_ > tol_ && numIters < maxIterations_ && maxGrad_ < abortGrad_)
     {
       numIters++;
       iterate(field, theory, referenceField);
@@ -114,11 +90,21 @@ namespace monsta
 
     double finalEnergy = theory.computeEnergy(field);
 
-    if (numIters < maxIterations_) {
+    if (maxGrad_ > abortGrad_)
+    {
+      COUT << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
+      // COUT << "Maximum gradient: " << maxGrad_ << std::endl;
+      COUT << "Energy reached: " << finalEnergy << std::endl;
+      return false;
+    }
+    if (numIters < maxIterations_)
+    {
       COUT << "Gradient descent finished in " << numIters << " iterations." << std::endl;
       COUT << "Minimum energy: " << finalEnergy << std::endl;
       return true;
-    } else {
+    }
+    else
+    {
       COUT << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
       // COUT << "Maximum gradient: " << maxGrad_ << std::endl;
       COUT << "Energy reached: " << finalEnergy << std::endl;
@@ -188,7 +174,7 @@ namespace monsta
           for (int colIdx = 0; colIdx < numCols; colIdx++)
           {
             gradVal = gradMat(rowIdx, colIdx);
-            if (abs(gradVal) > abs(maxGrad) && !coreCheck(site)) { maxGrad = abs(gradVal); }
+            if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
           }
         }
         gradMat = gradMat - 2*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
@@ -211,7 +197,6 @@ namespace monsta
             gradVals[vecIdx] = gradVal;
             if (matIdx == 3)
             {
-              // if (abs(gradVal) > abs(maxGrad) && !coreCheck(site)) { maxGrad = abs(gradVal); }
               oldGradVal = oldGrads_(site, rowIdx, colIdx);
 
               stepChangeNumerator += abs(real(oldGradVal) * (real(oldGradVal - gradVal)));
@@ -223,8 +208,7 @@ namespace monsta
           }
         }
       }
-      std::vector<int> monopoleNums = getMonopoleNums(field, site, theory);
-      std::vector< std::complex<double> > oldFieldVals(numRows*numCols*numMatrices);
+
       for (int matIdx = 0; matIdx < numMatrices; matIdx++)
       {
         for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
@@ -234,38 +218,10 @@ namespace monsta
             vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
             fieldVal = field(site, matIdx, rowIdx, colIdx);
             field(site, matIdx, rowIdx, colIdx) = fieldVal - stepSize_*gradVals[vecIdx];
-            oldFieldVals[vecIdx] = fieldVal;
           }
         }
         theory.postProcess(field, site, matIdx);
       }
-
-
-      bool monopoleNumChanged = false;
-      std::vector<int> newMonopoleNums = getMonopoleNums(field, site, theory);
-      for (int ii = 0; ii < monopoleNums.size(); ii++)
-      {
-        if (monopoleNums[ii] != newMonopoleNums[ii])
-        {
-          monopoleNumChanged = true;
-        }
-      }
-
-      // if (monopoleNumChanged)
-      // {
-      //   for (int matIdx = 0; matIdx < 3; matIdx++)
-      //   {
-      //     for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-      //     {
-      //       for (int colIdx = 0; colIdx < numCols; colIdx++)
-      //       {
-      //         vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
-      //         field(site, matIdx, rowIdx, colIdx) = oldFieldVals[vecIdx];// + stepSize_*gradVals[vecIdx];
-      //       }
-      //     }
-      //     theory.postProcess(field, site, matIdx);
-      //   }
-      // }
     }
 
 
@@ -281,7 +237,7 @@ namespace monsta
           for (int colIdx = 0; colIdx < numCols; colIdx++)
           {
             gradVal = gradMat(rowIdx, colIdx);
-            if (abs(gradVal) > abs(maxGrad) && !coreCheck(site)) { maxGrad = abs(gradVal); }
+            if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
           }
         }
         gradMat = gradMat - 2*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
@@ -304,7 +260,6 @@ namespace monsta
             gradVals[vecIdx] = gradVal;
             if (matIdx == 3)
             {
-              // if (abs(gradVal) > abs(maxGrad) && !coreCheck(site)) { maxGrad = abs(gradVal); }
               oldGradVal = oldGrads_(site, rowIdx, colIdx);
 
               stepChangeNumerator += abs(real(oldGradVal) * (real(oldGradVal - gradVal)));
@@ -316,8 +271,7 @@ namespace monsta
           }
         }
       }
-      std::vector<int> monopoleNums = getMonopoleNums(field, site, theory);
-      std::vector< std::complex<double> > oldFieldVals(numRows*numCols*numMatrices);
+
       for (int matIdx = 0; matIdx < numMatrices; matIdx++)
       {
         for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
@@ -327,38 +281,10 @@ namespace monsta
             vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
             fieldVal = field(site, matIdx, rowIdx, colIdx);
             field(site, matIdx, rowIdx, colIdx) = fieldVal - stepSize_*gradVals[vecIdx];
-            oldFieldVals[vecIdx] = fieldVal;
           }
         }
         theory.postProcess(field, site, matIdx);
       }
-
-
-      bool monopoleNumChanged = false;
-      std::vector<int> newMonopoleNums = getMonopoleNums(field, site, theory);
-      for (int ii = 0; ii < monopoleNums.size(); ii++)
-      {
-        if (monopoleNums[ii] != newMonopoleNums[ii])
-        {
-          monopoleNumChanged = true;
-        }
-      }
-
-      // if (monopoleNumChanged)
-      // {
-      //   for (int matIdx = 0; matIdx < 3; matIdx++)
-      //   {
-      //     for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-      //     {
-      //       for (int colIdx = 0; colIdx < numCols; colIdx++)
-      //       {
-      //         vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
-      //         field(site, matIdx, rowIdx, colIdx) = oldFieldVals[vecIdx];// + stepSize_*gradVals[vecIdx];
-      //       }
-      //     }
-      //     theory.postProcess(field, site, matIdx);
-      //   }
-      // }
     }
 
     parallel.sum(stepChangeNumerator);
@@ -369,47 +295,11 @@ namespace monsta
     if (stepSize_ > maxStepSize_) { stepSize_ = maxStepSize_; }
 
     theory.applyBoundaryConditions(field);
-    // double stepChange = system.updateGradientReturnStepChange();
-    // stepSize_ *= stepChange;
     parallel.max(maxGrad);
     maxGrad_ = maxGrad;
 
     clock_t end = clock();
     // COUT << double(end - begin) / CLOCKS_PER_SEC << endl;
-  }
-
-  std::vector<int> GradDescentSolverChigusa::getMonopoleNums(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, monsta::GeorgiGlashowSu2Theory &theory)
-  {
-    std::vector<int> monopoleNums(7);
-
-    LATfield2::Site shiftedSite(field.lattice());
-
-    monopoleNums[0] = theory.getMonopoleNumber(field, site);
-    shiftedSite = site - 0;
-    monopoleNums[1] = theory.getMonopoleNumber(field, shiftedSite);
-    shiftedSite = shiftedSite - 1;
-    monopoleNums[2] = theory.getMonopoleNumber(field, shiftedSite);
-    shiftedSite = shiftedSite + 0;
-    monopoleNums[3] = theory.getMonopoleNumber(field, shiftedSite);
-    shiftedSite = shiftedSite + 1;
-    shiftedSite = shiftedSite - 2;
-    monopoleNums[4] = theory.getMonopoleNumber(field, shiftedSite);
-    shiftedSite = shiftedSite - 0;
-    monopoleNums[5] = theory.getMonopoleNumber(field, shiftedSite);
-    shiftedSite = shiftedSite + 0;
-    shiftedSite = shiftedSite - 1;
-    monopoleNums[6] = theory.getMonopoleNumber(field, shiftedSite);
-
-    return monopoleNums;
-  }
-
-  bool GradDescentSolverChigusa::coreCheck(LATfield2::Site &site)
-  {
-    // for (int ii = 0; ii < coreIndices_.size(); ii++)
-    // {
-    //   if (site.index() == coreIndices_[ii]) { return true; }
-    // }
-    return false;
   }
 }
 
