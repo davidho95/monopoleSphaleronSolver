@@ -9,9 +9,9 @@ namespace monsta
   class GradDescentSolverChigusa
   {
   public:
-    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize);
-    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
-    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double abortGrad);
+    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize double correctionCoeff,);
+    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, std::vector<int> skipCpts);
+    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
@@ -31,6 +31,7 @@ namespace monsta
     double energyOld;
     bool isVerbose_ = true;
     double abortGrad_ = 1e6;
+    double correctionCoeff_ = 2;
     std::vector<int> skipCpts_;
     LATfield2::Field< std::complex<double> > oldGrads_;
 
@@ -38,11 +39,11 @@ namespace monsta
   };
 
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize)
-  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize) {}
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff) {}
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
-  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), skipCpts_(skipCpts) {}
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), skipCpts_(skipCpts) {}
     GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double abortGrad)
-  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), abortGrad_(abortGrad) {}
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad) {}
 
   void GradDescentSolverChigusa::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
@@ -177,7 +178,7 @@ namespace monsta
             if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
           }
         }
-        gradMat = gradMat - 2*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
+        gradMat = gradMat - correctionCoeff_*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
         bool skip = false;
         for (int ii = 0; ii < skipCpts_.size(); ii++)
         {
@@ -240,7 +241,7 @@ namespace monsta
             if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
           }
         }
-        gradMat = gradMat - 2*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
+        gradMat = gradMat - correctionCoeff_*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
         bool skip = false;
         for (int ii = 0; ii < skipCpts_.size(); ii++)
         {
