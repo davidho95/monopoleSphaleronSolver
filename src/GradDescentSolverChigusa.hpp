@@ -9,7 +9,7 @@ namespace monsta
   class GradDescentSolverChigusa
   {
   public:
-    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize double correctionCoeff,);
+    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize double correctionCoeff);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, std::vector<int> skipCpts);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad);
 
@@ -38,11 +38,11 @@ namespace monsta
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory, LATfield2::Field< std::complex<double> > &referenceField);
   };
 
-  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize)
+  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff) {}
-  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
+  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, std::vector<int> skipCpts)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), skipCpts_(skipCpts) {}
-    GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double abortGrad)
+  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad) {}
 
   void GradDescentSolverChigusa::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
