@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 
     monsta::scaleVev(pairField, theory);
     minimiser.solve(theory, pairField);
-    solver.solve(theory, pairField);
+    // solver.solve(theory, pairField);
 
     for (site.first(); site.test(); site.next())
     {
