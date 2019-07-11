@@ -74,7 +74,7 @@ int main(int argc, char **argv)
   LATfield2::Site site(lattice);
 
   double initialStep = 0.001;
-  double maxStepSize = 0.05*vev*gaugeCoupling;
+  double maxStepSize = 0.01*vev*gaugeCoupling;
   double tol = 5e-4;
   double abortGrad = 0.1;
   int maxNumSteps = 40000;

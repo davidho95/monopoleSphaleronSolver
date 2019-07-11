@@ -119,8 +119,8 @@ int main(int argc, char **argv)
     
     // COUT << selfCoupling << endl;
 
-    monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling);
-    monsta::GradDescentSolver solver(tol, 50, initialStep, maxStepSize*vev*gaugeCoupling, 50);
+    monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling, 50);
+    // monsta::GradDescentSolver solver(tol, 50, initialStep, maxStepSize*vev*gaugeCoupling, 50);
 
     monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
     monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
