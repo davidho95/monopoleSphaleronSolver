@@ -94,11 +94,8 @@ int main(int argc, char **argv)
   double maxStepSize = 0.05;
   double tol = 5e-4;
   int maxNumSteps = 20000;
-  double abortGrad = 1;
-  double correctionCoeff = 2;
-
-  monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize);
-  monsta::GradDescentSolver solver(tol, 50, initialStep, maxStepSize, 50);
+  double abortGrad = 0.1;
+  double correctionCoeff = 1.3;
 
   monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
@@ -117,9 +114,13 @@ int main(int argc, char **argv)
   for (int ii = 0; ii < numIncrements; ii++)
   {
     vev = vevs[ii];
-    gaugeCoupling = vev;
+    gaugeCoupling = 0.5;
     selfCoupling = pow(gaugeCoupling, 2) / 2;
+    
     // COUT << selfCoupling << endl;
+
+    monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling);
+    monsta::GradDescentSolver solver(tol, 50, initialStep, maxStepSize*vev*gaugeCoupling, 50);
 
     monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
     monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
@@ -155,7 +156,7 @@ int main(int argc, char **argv)
       }
     }
 
-    monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize, correctionCoeff, abortGrad);
+    monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling, correctionCoeff, abortGrad);
     bool solved = chigusaSolver.solve(theory, pairField, referenceField);
 
     double E = theory.computeEnergy(pairField);

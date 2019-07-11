@@ -10,6 +10,7 @@ namespace monsta
   public:
     GradMinimiser(double tol, int maxIterations, double initialStepSize, double maxStepSize);
     GradMinimiser(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
+    GradMinimiser(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
@@ -27,6 +28,7 @@ namespace monsta
     double relEnergyChange = 1e6;
     double energy;
     double energyOld;
+    int minSteps_ = 0;
     bool isVerbose_ = true;
     std::vector<int> skipCpts_;
     LATfield2::Field< std::complex<double> > oldGrads_;
@@ -39,6 +41,8 @@ namespace monsta
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize) {}
   GradMinimiser::GradMinimiser(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), skipCpts_(skipCpts) {}
+  GradMinimiser::GradMinimiser(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps)
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), minSteps_(minSteps) {}
 
   void GradMinimiser::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
@@ -70,7 +74,7 @@ namespace monsta
     int numIters = 1;
 
     double maxGradOld;
-    while (numIters < 20)
+    while (numIters < minSteps_)
     {
       maxGradOld = maxGrad_;
       numIters++;
@@ -81,7 +85,7 @@ namespace monsta
       if (isVerbose_)
       {
         COUT << energy << std::endl;
-        // COUT << maxGrad_ << std::endl;
+        COUT << maxGrad_ << std::endl;
       }
     }
     while (maxGradOld > maxGrad_ and maxGrad_ > 1e-4 && numIters < maxIterations_)
