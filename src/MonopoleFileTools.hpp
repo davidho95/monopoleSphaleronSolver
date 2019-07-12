@@ -22,6 +22,7 @@ namespace monsta
       ifstream fileToMerge;
       std::string fileToMergeName = fileBaseName + std::to_string(ii) + ".txt";
       fileToMerge.open(fileToMergeName);
+      if (fileToMerge.fail()) { break; }
       fileStream << fileToMerge.rdbuf();
       fileToMerge.close();
       remove((fileToMergeName).c_str());

@@ -34,4 +34,5 @@ int main(int argc, char **argv)
   monsta::mergeFiles(outputPath + "/magneticFieldData", numFiles);
   monsta::mergeFiles(outputPath + "/gaugeData", numFiles);
   monsta::mergeFiles(outputPath + "/energyData", numFiles);
+  monsta::mergeFiles(outputPath + "/gradData", numFiles);
 }
