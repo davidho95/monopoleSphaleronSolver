@@ -12,6 +12,7 @@ namespace monsta
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, std::vector<int> skipCpts);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad);
+    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad, int minSteps);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
@@ -34,6 +35,7 @@ namespace monsta
     double correctionCoeff_ = 2;
     std::vector<int> skipCpts_;
     LATfield2::Field< std::complex<double> > oldGrads_;
+    int minSteps_;
 
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory, LATfield2::Field< std::complex<double> > &referenceField);
   };
@@ -44,6 +46,8 @@ namespace monsta
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), skipCpts_(skipCpts) {}
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad) {}
+  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad)
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad), minSteps_(minSteps) {}
 
   void GradDescentSolverChigusa::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
@@ -73,6 +77,21 @@ namespace monsta
     energy = theory.computeEnergy(field);
     relEnergyChange = (energy - energyOld);
     int numIters = 1;
+
+    while (numIters < minSteps)
+    {
+      numIters++;
+      iterate(field, theory, referenceField);
+      energyOld = energy;
+      energy = theory.computeEnergy(field);
+      relEnergyChange = (energy - energyOld);
+      if (isVerbose_)
+      {
+        COUT << energy << std::endl;
+        COUT << maxGrad_ << std::endl;
+        // COUT << stepSize_ << std::endl;
+      }
+    }
 
     while (maxGrad_ > tol_ && numIters < maxIterations_ && maxGrad_ < abortGrad_)
     {
