@@ -90,6 +90,14 @@ int main(int argc, char **argv)
   monsta::readRawField(pairField, inputPath + "/rawData");
   periodicTheory.applyBoundaryConditions(pairField);
 
+  for (site.first(); site.test(); site.next())
+  {
+    for (int ii = 0; ii < numMatrices; ii++)
+    {
+      periodicTheory.postProcess(field, site, ii);
+    }
+  }
+
   monsta::readRawField(referenceField, inputPath + "/referenceRawData");
 
   monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize, correctionCoeff, abortGrad);
