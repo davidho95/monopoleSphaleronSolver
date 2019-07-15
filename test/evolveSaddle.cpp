@@ -83,9 +83,6 @@ int main(int argc, char **argv)
   COUT << "Max step: " << maxStepSize << endl;
   COUT << "Correction coefficient" << correctionCoeff << endl;
 
-  monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize, minGradSteps);
-  // monsta::GradDescentSolver solver(tol, 50, initialStep, maxStepSize, 50);
-
   monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
   LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
