@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 
   monsta::readRawField(referenceField, inputPath + "/referenceRawData");
 
-  monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize, correctionCoeff, abortGrad);
+  monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize, correctionCoeff, abortGrad, 50);
   chigusaSolver.solve(periodicTheory, pairField, referenceField);
 
   monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
