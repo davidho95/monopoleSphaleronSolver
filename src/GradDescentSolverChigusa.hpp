@@ -46,7 +46,7 @@ namespace monsta
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), skipCpts_(skipCpts) {}
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad) {}
-  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad)
+  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad, minSteps_(minSteps))
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad), minSteps_(minSteps) {}
 
   void GradDescentSolverChigusa::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
@@ -78,7 +78,7 @@ namespace monsta
     relEnergyChange = (energy - energyOld);
     int numIters = 1;
 
-    while (numIters < minSteps)
+    while (numIters < minSteps_)
     {
       numIters++;
       iterate(field, theory, referenceField);
