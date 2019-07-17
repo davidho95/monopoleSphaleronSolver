@@ -35,7 +35,7 @@ namespace monsta
     double correctionCoeff_ = 2;
     std::vector<int> skipCpts_;
     LATfield2::Field< std::complex<double> > oldGrads_;
-    int minSteps_;
+    int minSteps_ = 0;
 
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory, LATfield2::Field< std::complex<double> > &referenceField);
   };
