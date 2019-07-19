@@ -4,21 +4,15 @@
 #include "../src/GeorgiGlashowSu2EomTheory.hpp"
 #include "../src/Matrix.hpp"
 #include "../src/GradDescentSolverBBStep.hpp"
-#include "../src/GradDescentSolverChigusa.hpp"
-#include "../src/GradDescentSolverCorePreserving.hpp"
-#include "../src/GradMinimiser.hpp"
 #include "../src/Su2Tools.hpp"
 #include "../src/MonopoleFileTools.hpp"
 #include "../src/MonopoleFieldTools.hpp"
 #include <iostream>
 #include <fstream>
-#include <ctime>
 
 
 int main(int argc, char **argv)
 {
-  clock_t begin = clock();
-
   std::string outputPath;
   std::string inputPath;
   int sz = 16;
@@ -28,6 +22,7 @@ int main(int argc, char **argv)
   double gaugeCoupling = 1;
   double selfCoupling = 1;
   int sep = sz/2;
+  double xAspect = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -59,13 +54,20 @@ int main(int argc, char **argv)
         break;
       case 'd':
         sep = atoi(argv[++i]);
+        break;
+      case 'x':
+        xAspect = atof(argv[++i]);
+        break;
     }
   }
 
   parallel.initialize(n,m);
 
   int dim = 3;
-  int latSize[dim] = {sz, sz, sz};
+  int xSz = round(xAspect*sz);
+  int ySz = sz;
+  int zSz = sz;
+  int latSize[dim] = {xSz, ySz, zSz};
   int haloSize = 2;
   int numMatrices = 4;
   int numRows = 2;
@@ -78,14 +80,14 @@ int main(int argc, char **argv)
 
   double initialStep = 0.01;
   double maxStepSize = 0.05;
-  double tol = 1e-6;
+  double tol = 1e-4;
   int maxNumSteps = 20000;
 
   monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {2, 0, 0}, true);
   monsta::readRawField(field, inputPath + "/rawData");
   theory.applyBoundaryConditions(field);
 
-  monsta::GradDescentSolverCorePreserving solver(tol, maxNumSteps, initialStep, maxStepSize);
+  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
 
   LATfield2::Field<complex<double> > centredField(lattice, numMatrices, numRows, numCols, 0);
   std::vector<int> monopolePos = monsta::findMonopole(field, theory);

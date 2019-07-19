@@ -25,6 +25,7 @@ int main(int argc, char **argv)
   double selfCoupling = 1;
   int fluxQuanta = 0;
   int range = 1;
+  double xAspect = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -60,13 +61,19 @@ int main(int argc, char **argv)
       case 'r':
         range = atoi(argv[++i]);
         break;
+      case 'x':
+        xAspect = atof(argv[++i]);
+        break;
     }
   }
 
   parallel.initialize(n,m);
 
   int dim = 3;
-  int latSize[dim] = {sz, sz, sz};
+  int xSz = round(xAspect*sz);
+  int ySz = sz;
+  int zSz = sz;
+  int latSize[dim] = {xSz, ySz, zSz};
   int haloSize = 2;
   int numMatrices = 4;
   int numRows = 2;
@@ -79,7 +86,7 @@ int main(int argc, char **argv)
 
   double initialStep = 0.001;
   double maxStepSize = 0.05/vev;
-  double tol = 1e-3;
+  double tol = 1e-4;
   int maxNumSteps = 10000;
 
   monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {2, 0, 0}, true);
@@ -87,7 +94,7 @@ int main(int argc, char **argv)
   theory.applyBoundaryConditions(field);
 
   monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
-  solver.solve(theory, field);
+  // solver.solve(theory, field);
 
   LATfield2::Field<complex<double> > centredField(lattice, numMatrices, numRows, numCols, 0);
   std::vector<int> monopolePos = monsta::findMonopole(field, theory);
@@ -104,6 +111,7 @@ int main(int argc, char **argv)
   bool maxReached = false;
   for (int sep = predictedMax - range; sep <= predictedMax + range; sep++)
   {
+    if (sep < 1 || sep > xSz - 1) { continue; }
     monsta::setPairInitialConds2(field, pairField, periodicTheory, sep);
     monsta::addConstantMagneticField(pairField, periodicTheory, -fluxQuanta);
     solver.solve(periodicTheory, pairField);

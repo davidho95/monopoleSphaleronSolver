@@ -35,6 +35,7 @@ int main(int argc, char **argv)
   double startVev;
   double endVev;
   double numIncrements;
+  double xAspect = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -73,17 +74,24 @@ int main(int argc, char **argv)
       case 'I':
         numIncrements = atof(argv[++i]);
         break;
+      case 'x':
+        xAspect = atof(argv[++i]);
+        break;
     }
   }
 
   parallel.initialize(n,m);
 
   int dim = 3;
-  int latSize[dim] = {sz, sz, sz};
+  int xSz = round(xAspect*sz);
+  int ySz = sz;
+  int zSz = sz;
+  int latSize[dim] = {xSz, ySz, zSz};
   int haloSize = 2;
   int numMatrices = 4;
   int numRows = 2;
   int numCols = 2;
+
 
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
@@ -93,8 +101,8 @@ int main(int argc, char **argv)
   double initialStep = 0.001;
   double maxStepSize = 0.05;
   double tol = 5e-4;
-  int maxNumSteps = 20000;
-  double abortGrad = 0.1;
+  int maxNumSteps = 50000;
+  double abortGrad = 1;
   double correctionCoeff = 1.3;
 
   monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
@@ -163,7 +171,7 @@ int main(int argc, char **argv)
     if (parallel.rank() == 1)
     {
       ofstream fileStream;
-      fileStream.open(outputPath + "/energies.txt", std::ios_base::app);
+      fileStream.open(outputPath + "/energies1.txt", std::ios_base::app);
       fileStream << E << endl;
       fileStream.close();
     }
@@ -172,7 +180,7 @@ int main(int argc, char **argv)
     vevString.erase(vevString.find_last_not_of('0') + 1, std::string::npos);
     vevString.replace(1,1,"_");
 
-    std::string currentOutputPath = outputPath + "saddleData" + vevString;
+    std::string currentOutputPath = outputPath + "/saddleData" + vevString;
 
     mkdir(currentOutputPath.c_str(), 0777);
 

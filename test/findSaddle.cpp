@@ -27,6 +27,8 @@ int main(int argc, char **argv)
   double gaugeCoupling = 1;
   double selfCoupling = 1;
   int sep = sz/2;
+  double correctionCoeff = 1.5;
+  double xAspect = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -56,13 +58,22 @@ int main(int argc, char **argv)
       case 'l':
         selfCoupling = atof(argv[++i]);
         break;
+      case 'b':
+        correctionCoeff = atof(argv[++i]);
+        break;
+      case 'x':
+        xAspect = atof(argv[++i]);
+        break;
     }
   }
 
   parallel.initialize(n,m);
 
   int dim = 3;
-  int latSize[dim] = {sz, sz, sz};
+  int xSz = round(xAspect*sz);
+  int ySz = sz;
+  int zSz = sz;
+  int latSize[dim] = {xSz, ySz, zSz};
   int haloSize = 2;
   int numMatrices = 4;
   int numRows = 2;
@@ -74,18 +85,22 @@ int main(int argc, char **argv)
   LATfield2::Site site(lattice);
 
   double initialStep = 0.001;
-  double maxStepSize = 0.01*vev*gaugeCoupling;
+  double maxStepSize = 0.02*gaugeCoupling;
   double tol = 5e-4;
   double abortGrad = 0.1;
-  int maxNumSteps = 40000;
-  double correctionCoeff = 1.3;
+  int maxNumSteps = 10000;
+  int minGradSteps = 10;
 
-  monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize, 50);
+  COUT << "Max step: " << maxStepSize << endl;
+  COUT << "Correction coefficient" << correctionCoeff << endl;
+  COUT << "Minimum naive gradient descent steps" << minGradSteps << endl;
+
+  monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize, minGradSteps);
   // monsta::GradDescentSolver solver(tol, 50, initialStep, maxStepSize, 50);
 
   monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
-  LATfield2::Field<complex<double> > initialField(lattice, numMatrices, numRows, numCols, 0);
+  LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
 
   monsta::readRawField(pairField, inputPath + "/rawData");
   periodicTheory.applyBoundaryConditions(pairField);
@@ -105,32 +120,33 @@ int main(int argc, char **argv)
       {
         gradMat = gradMat - 0.5*real(monsta::trace(gradMat*conjugateTranspose(fieldMat)))*fieldMat;
       }
-      initialField(site, ii, 0, 0) = gradMat(0, 0);
-      initialField(site, ii, 0, 1) = gradMat(0, 1);
-      initialField(site, ii, 1, 0) = gradMat(1, 0);
-      initialField(site, ii, 1, 1) = gradMat(1, 1);
+      referenceField(site, ii, 0, 0) = gradMat(0, 0);
+      referenceField(site, ii, 0, 1) = gradMat(0, 1);
+      referenceField(site, ii, 1, 0) = gradMat(1, 0);
+      referenceField(site, ii, 1, 1) = gradMat(1, 1);
     }
   }
 
-  double norm = monsta::innerProduct(initialField, initialField);
+  double norm = monsta::innerProduct(referenceField, referenceField);
 
   for (site.first(); site.test(); site.next())
   {
-    for (int ii = 0; ii < initialField.components(); ii++)
+    for (int ii = 0; ii < referenceField.components(); ii++)
     {
-      initialField(site, ii) = initialField(site, ii)/ sqrt(norm);
+      referenceField(site, ii) = referenceField(site, ii)/ sqrt(norm);
     }
   }
 
 
   monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize, correctionCoeff, abortGrad);
-  chigusaSolver.solve(periodicTheory, pairField, initialField);
+  chigusaSolver.solve(periodicTheory, pairField, referenceField);
 
   monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   double gradSq = eomTheory.computeEnergy(pairField);
   COUT << gradSq << endl;
 
   monsta::writeRawField(pairField, outputPath + "/rawData");
+  monsta::writeRawField(referenceField, outputPath + "/referenceRawData");
   monsta::writeCoords(pairField, outputPath + "/coords");
   monsta::writeHiggsFieldUnitary(pairField, outputPath + "/higgsData");
   monsta::writeMagneticField(pairField, outputPath + "/magneticFieldData", periodicTheory);
