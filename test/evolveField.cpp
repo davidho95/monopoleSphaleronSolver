@@ -1,12 +1,8 @@
 #include "LATfield2.hpp"
 #include <complex>
 #include "../src/GeorgiGlashowSu2TheoryUnitary.hpp"
-#include "../src/GeorgiGlashowSu2EomTheory.hpp"
 #include "../src/Matrix.hpp"
 #include "../src/GradDescentSolverBBStep.hpp"
-#include "../src/GradDescentSolverChigusa.hpp"
-#include "../src/GradDescentSolverCorePreserving.hpp"
-#include "../src/GradSqMinimiser.hpp"
 #include "../src/Su2Tools.hpp"
 #include "../src/MonopoleFileTools.hpp"
 #include "../src/MonopoleFieldTools.hpp"
