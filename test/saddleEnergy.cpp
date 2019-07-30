@@ -36,6 +36,7 @@ int main(int argc, char **argv)
   double endVev;
   double numIncrements;
   double xAspect = 1;
+  double correctionCoeff = 1.5;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -64,6 +65,9 @@ int main(int argc, char **argv)
         break;
       case 'l':
         selfCoupling = atof(argv[++i]);
+        break;
+      case 'b':
+        correctionCoeff = atof(argv[++i]);
         break;
       case 'S':
         startVev = atof(argv[++i]);
@@ -103,7 +107,6 @@ int main(int argc, char **argv)
   double tol = 5e-4;
   int maxNumSteps = 50000;
   double abortGrad = 1;
-  double correctionCoeff = 1.3;
 
   monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
