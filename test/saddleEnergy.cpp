@@ -105,7 +105,7 @@ int main(int argc, char **argv)
   double initialStep = 0.001;
   double maxStepSize = 0.05;
   double tol = 5e-4;
-  int maxNumSteps = 50000;
+  int maxNumSteps = 200000;
   double abortGrad = 1;
 
   monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
@@ -127,10 +127,12 @@ int main(int argc, char **argv)
     vev = vevs[ii];
     gaugeCoupling = 0.5;
     selfCoupling = pow(gaugeCoupling, 2) / 2;
+
+    if (vev < 0.4) { correctionCoeff = 1.2; } 
     
     // COUT << selfCoupling << endl;
 
-    monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling, 50);
+    monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling, 100);
     // monsta::GradDescentSolver solver(tol, 50, initialStep, maxStepSize*vev*gaugeCoupling, 50);
 
     monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
@@ -174,7 +176,7 @@ int main(int argc, char **argv)
     if (parallel.rank() == 1)
     {
       ofstream fileStream;
-      fileStream.open(outputPath + "/energies1.txt", std::ios_base::app);
+      fileStream.open(outputPath + "/energies.txt", std::ios_base::app);
       fileStream << E << endl;
       fileStream.close();
     }
