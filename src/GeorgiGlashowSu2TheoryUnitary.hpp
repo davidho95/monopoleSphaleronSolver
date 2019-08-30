@@ -11,6 +11,7 @@ namespace monsta {
     GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, std::vector<int> boundaryConditions);
     GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, std::vector<int> boundaryConditions, bool tHooftLine);
     double getLocalEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
+    double getSymmetricEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
     std::complex<double> getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx, int rowIdx, int colIdx) const;
     monsta::Matrix getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
     double getVev() const { return vev_; }
@@ -72,20 +73,50 @@ namespace monsta {
     E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, site, 2, 0))));
     E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, site, 0, 1))));
 
-    // for (int ii = 0; ii < 3; ii++)
-    // {
-    //   if (tHooftLineCheck(field, site, ii))
-    //   {
-    //     E += getTHooftOperator(field, site, ii, fluxQuanta_);
-    //   }
-    // }
-
     // Covariant Derivative
     for (int ii = 0; ii < 3; ii++)
     {
       LATfield2::Site shiftedSite = site + ii;
       Matrix covDeriv = field(shiftedSite, 3, 0, 0)*Matrix(field, site, ii)*pauli3*conjugateTranspose(Matrix(field, site, ii)) - field(site, 3, 0, 0)*pauli3;
       E += real(trace(covDeriv*covDeriv));
+    }
+
+    // Higgs Potential
+    E += real(selfCoupling_*pow(2.0*pow(field(site, 3, 0, 0),2) - pow(vev_, 2),2));
+
+    return E;
+  }
+
+  double GeorgiGlashowSu2Theory::getSymmetricEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
+  {
+    double E = 0;
+    LATfield2::Site tempSite(site);
+
+    // Wilson action
+    for (int ii = 0; ii < 3; ii++)
+    {
+      for (int jj = 0; jj < 3; jj++)
+      {
+        if (jj >= ii) { continue; }
+        E += 0.5/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, site, ii, jj))));
+        tempSite = site - ii;
+        E += 0.5/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, tempSite, ii, jj))));
+        tempSite = site - jj;
+        E += 0.5/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, tempSite, ii, jj))));
+        tempSite = site - ii - jj;
+        E += 0.5/pow(gaugeCoupling_,2)*(2 - real(trace(getPlaquette(field, tempSite, ii, jj))));
+      }
+    }
+
+    // Covariant Derivative
+    for (int ii = 0; ii < 3; ii++)
+    {
+      tempSite = site + ii;
+      Matrix covDeriv = field(tempSite, 3, 0, 0)*Matrix(field, site, ii)*pauli3*conjugateTranspose(Matrix(field, site, ii)) - field(site, 3, 0, 0)*pauli3;
+      E += 0.5*real(trace(covDeriv*covDeriv));
+      tempSite = site - ii;
+      covDeriv = field(site, 3, 0, 0)*Matrix(field, tempSite, ii)*pauli3*conjugateTranspose(Matrix(field, tempSite, ii)) - field(site, 3, 0, 0)*pauli3;
+      E += 0.5*real(trace(covDeriv*covDeriv));
     }
 
     // Higgs Potential
@@ -460,42 +491,6 @@ namespace monsta {
 
   }
 
-  // double GeorgiGlashowSu2Theory::getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
-  // {
-  //   int dir1 = (cpt + 1) % 3;
-  //   int dir2 = (cpt + 2) % 3;
-
-  //   monsta::Matrix plaquette = getPlaquette(field, site, dir1, dir2);
-  //   double magneticField = 2./gaugeCoupling_*arg(plaquette(0,0));
-  //   if (tHooftLineCheck(field, site, cpt))
-  //   {
-  //     magneticField = magneticField > 0 ? magneticField - 2*3.141592654 : magneticField + 2*3.141592654;
-  //   }
-  //   return (magneticField);
-  // }
-
-  // double GeorgiGlashowSu2Theory::getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
-  // {
-  //   int dir1 = (cpt + 1) % 3;
-  //   int dir2 = (cpt + 2) % 3;
-
-  //   Matrix u1Projector({1, 0, 0, 0});
-
-  //   LATfield2::Site tempSite(site);
-  //   monsta::Matrix u1Plaquette = u1Projector*Matrix(field, site, dir1)*u1Projector;
-  //   tempSite = tempSite+dir1;
-  //   u1Plaquette = u1Plaquette*u1Projector*Matrix(field, tempSite, dir2)*u1Projector;
-  //   tempSite = tempSite-dir1+dir2;
-  //   u1Plaquette = u1Plaquette*u1Projector*conjugateTranspose(Matrix(field, tempSite, dir1))*u1Projector;
-  //   tempSite = tempSite-dir2;
-  //   u1Plaquette = u1Plaquette*u1Projector*conjugateTranspose(Matrix(field, tempSite, dir2))*u1Projector;
-
-
-  //   double magneticField = 2./gaugeCoupling_*arg(u1Plaquette(0,0));
-
-  //   return (magneticField);
-  // }
-
   double GeorgiGlashowSu2Theory::getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
   {
     int dir1 = (cpt + 1) % 3;
@@ -503,13 +498,10 @@ namespace monsta {
 
 
     LATfield2::Site tempSite(site);
-    // cout << site.coord(0) << " " << site.coord(1) << " " << site.coord(2) << endl;
     std::complex<double> u1Plaquette = field(site, dir1, 0, 0);
     tempSite = tempSite+dir1;
-    // cout << tempSite.coord(0) << " " << tempSite.coord(1) << " " << tempSite.coord(2) << endl;
     u1Plaquette = u1Plaquette*field(tempSite, dir2, 0, 0);
     tempSite = tempSite-dir1+dir2;
-    // cout << tempSite.coord(0) << " " << tempSite.coord(1) << " " << tempSite.coord(2) << endl;
     u1Plaquette = u1Plaquette*conj(field(tempSite, dir1, 0, 0));
     tempSite = tempSite-dir2;
     u1Plaquette = u1Plaquette*conj(field(tempSite, dir2, 0, 0));

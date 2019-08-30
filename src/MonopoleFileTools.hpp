@@ -19,10 +19,10 @@ namespace monsta
     fileStream.open(fileBaseName + ".txt");
     for (int ii = 0; ii < numFiles; ii++)
     {
-      ifstream fileToMerge;
       std::string fileToMergeName = fileBaseName + std::to_string(ii) + ".txt";
+      ifstream fileToMerge(fileToMergeName.c_str());
+      if (!((bool)fileToMerge)) { COUT << "jonnyMorris" << endl; break; }
       fileToMerge.open(fileToMergeName);
-      if (fileToMerge.fail()) { break; }
       fileStream << fileToMerge.rdbuf();
       fileToMerge.close();
       remove((fileToMergeName).c_str());
@@ -222,6 +222,25 @@ namespace monsta
     for (site.first(); site.test(); site.next())
     {
       fileStream << theory.getLocalEnergyDensity(field, site) << std::endl;
+    }
+    fileStream.close();
+    parallel.barrier();
+
+    // mergeFiles(fileBaseName);
+  }
+
+  void writeSymmetricEnergyDensity(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::GeorgiGlashowSu2Theory &theory)
+  {
+    ofstream fileStream;
+    std::string fileName = getFileName(fileBaseName);
+    fileStream.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+
+    std::vector<double> su2Vec;
+    for (site.first(); site.test(); site.next())
+    {
+      fileStream << theory.getSymmetricEnergyDensity(field, site) << std::endl;
     }
     fileStream.close();
     parallel.barrier();
