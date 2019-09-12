@@ -3,7 +3,7 @@
 
 #include "LATfield2.hpp"
 #include <complex>
-// #include "GeorgiGlashowSu2TheoryNoMonopoles.hpp"
+#include "GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "Su2Tools.hpp"
 #include <cstdio>
 #include <iostream>
@@ -146,6 +146,24 @@ namespace monsta
     // mergeFiles(fileBaseName);
   }
 
+  void writeHiggsField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::ElectroweakTheory &theory)
+  {
+    ofstream fileStream;
+    std::string fileName = getFileName(fileBaseName);
+    fileStream.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+
+    for (site.first(); site.test(); site.next())
+    {
+      fileStream << theory.getHiggsField(field, site) << endl;
+    }
+    fileStream.close();
+    parallel.barrier();
+
+    // mergeFiles(fileBaseName);
+  }
+
   void writeHiggsFieldUnitary(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
   {
     ofstream fileStream;
@@ -167,6 +185,29 @@ namespace monsta
 
 
   void writeMagneticField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::GeorgiGlashowSu2Theory &theory)
+  {
+    ofstream fileStream;
+    std::string fileName = getFileName(fileBaseName);
+    fileStream.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+
+    std::vector<double> su2Vec;
+    for (site.first(); site.test(); site.next())
+    {
+      for (int ii = 0; ii < 3; ii++)
+      {
+        fileStream << theory.getMagneticField(field, site, ii) << " ";
+      }
+      fileStream << endl;
+    }
+    fileStream.close();
+    parallel.barrier();
+
+    // mergeFiles(fileBaseName);
+  }
+
+  void writeMagneticField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::ElectroweakTheory &theory)
   {
     ofstream fileStream;
     std::string fileName = getFileName(fileBaseName);
