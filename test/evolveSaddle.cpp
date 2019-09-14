@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
   double initialStep = 0.001;
   double maxStepSize = 0.05*vev*gaugeCoupling;
-  double tol = 5e-4;
+  double tol = 1e-5;
   double abortGrad = 0.1;
   int maxNumSteps = 50000;
   double correctionCoeff = 1.3;
