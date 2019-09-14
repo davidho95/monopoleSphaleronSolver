@@ -106,7 +106,7 @@ int main(int argc, char **argv)
   double maxStepSize = 0.05;
   double tol = 5e-4;
   int maxNumSteps = 200000;
-  double abortGrad = 1;
+  double abortGrad = 0.1;
 
   monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
@@ -125,14 +125,12 @@ int main(int argc, char **argv)
   for (int ii = 0; ii < numIncrements; ii++)
   {
     vev = vevs[ii];
-    gaugeCoupling = 0.5;
-    selfCoupling = pow(gaugeCoupling, 2) / 2;
 
-    if (vev < 0.4) { correctionCoeff = 1.2; } 
+    // if (vev < 0.4) { correctionCoeff = 1.2; } 
     
     // COUT << selfCoupling << endl;
 
-    monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling, 100);
+    monsta::GradMinimiser minimiser(tol, maxNumSteps, initialStep, maxStepSize*max(vev, 0.8)*gaugeCoupling, 100);
     // monsta::GradDescentSolver solver(tol, 50, initialStep, maxStepSize*vev*gaugeCoupling, 50);
 
     monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
