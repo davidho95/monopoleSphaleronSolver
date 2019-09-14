@@ -56,13 +56,19 @@ int main(int argc, char **argv)
       case 'l':
         selfCoupling = atof(argv[++i]);
         break;
+      case 'x':
+        xAspect = atof(argv[++i]);
+        break;
     }
   }
 
   parallel.initialize(n,m);
 
   int dim = 3;
-  int latSize[dim] = {sz, sz, sz};
+  int xSz = round(xAspect*sz);
+  int ySz = sz;
+  int zSz = sz;
+  int latSize[dim] = {xSz, ySz, zSz};
   int haloSize = 2;
   int numMatrices = 4;
   int numRows = 2;
@@ -77,7 +83,7 @@ int main(int argc, char **argv)
   double maxStepSize = 0.05*vev*gaugeCoupling;
   double tol = 1e-5;
   double abortGrad = 0.1;
-  int maxNumSteps = 50000;
+  int maxNumSteps = 200000;
   double correctionCoeff = 1.3;
 
   COUT << "Max step: " << maxStepSize << endl;
