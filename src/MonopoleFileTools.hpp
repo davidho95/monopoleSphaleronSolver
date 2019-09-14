@@ -4,6 +4,7 @@
 #include "LATfield2.hpp"
 #include <complex>
 #include "GeorgiGlashowSu2TheoryUnitary.hpp"
+#include "ElectroweakTheory.hpp"
 #include "Su2Tools.hpp"
 #include <cstdio>
 #include <iostream>

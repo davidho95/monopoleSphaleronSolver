@@ -8,6 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include "GeorgiGlashowSu2TheoryUnitary.hpp"
+#include "ElectroweakTheory.hpp"
 
 
 namespace monsta
