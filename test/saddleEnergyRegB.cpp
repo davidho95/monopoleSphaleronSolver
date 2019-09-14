@@ -182,11 +182,11 @@ int main(int argc, char **argv)
       fileStream.close();
     }
 
-    std::string vevString = std::to_string(vev);
-    vevString.erase(vevString.find_last_not_of('0') + 1, std::string::npos);
-    vevString.replace(1,1,"_");
+    std::string bString = std::to_string(bVals[ii]);
+    bString.erase(bString.find_last_not_of('0') + 1, std::string::npos);
+    bString.replace(1,1,"_");
 
-    std::string currentOutputPath = outputPath + "/saddleData" + vevString;
+    std::string currentOutputPath = outputPath + "/saddleData" + bString;
 
     mkdir(currentOutputPath.c_str(), 0777);
 
