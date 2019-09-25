@@ -65,9 +65,9 @@ namespace monsta {
     double E = 0;
 
     // Wilson action
-    // E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 1, 2))));
-    // E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 2, 0))));
-    // E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 0, 1))));
+    E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 1, 2))));
+    E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 2, 0))));
+    E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 0, 1))));
 
     if (mixingAngle_ > 1e-6)
     {
@@ -77,16 +77,16 @@ namespace monsta {
     }
 
     // Covariant Derivative
-    // for (int ii = 0; ii < 3; ii++)
-    // {
-    //   LATfield2::Site shiftedSite = site + ii;
-    //   E += 2*pow(getHiggsField(field, site),2);
-    //   E -= getHiggsField(field, site)*getHiggsField(field, shiftedSite)*real(trace(getSu2Link(field, site, ii)))*cos(real(getU1Link(field, site, ii)));
-    //   E += getHiggsField(field, site)*getHiggsField(field, shiftedSite)*imag(trace(getSu2Link(field, site, ii)*pauli3))*sin(real(getU1Link(field, site, ii)));
-    // }
+    for (int ii = 0; ii < 3; ii++)
+    {
+      LATfield2::Site shiftedSite = site + ii;
+      E += 2*pow(getHiggsField(field, site),2);
+      E -= getHiggsField(field, site)*getHiggsField(field, shiftedSite)*real(trace(getSu2Link(field, site, ii)))*cos(real(getU1Link(field, site, ii)));
+      E += getHiggsField(field, site)*getHiggsField(field, shiftedSite)*imag(trace(getSu2Link(field, site, ii)*pauli3))*sin(real(getU1Link(field, site, ii)));
+    }
 
     // Higgs Potential
-    // E += real(selfCoupling_*pow(2.0*pow(getHiggsField(field, site),2) - pow(vev_, 2),2));
+    E += real(selfCoupling_*pow(2.0*pow(getHiggsField(field, site),2) - pow(vev_, 2),2));
 
     return E;
   }
@@ -96,16 +96,16 @@ namespace monsta {
     monsta::Matrix grad(2);
     if (matIdx < 3)
     {
-      // int dir1 = (matIdx + 1) % 3;
-      // int dir2 = (matIdx + 2) % 3;
+      int dir1 = (matIdx + 1) % 3;
+      int dir2 = (matIdx + 2) % 3;
 
       // // Derivative of SU(2) Wilson action
-      // Matrix su2PlaquetteDerivMat = getSu2Staple(field, site, matIdx, dir1, true);
-      // su2PlaquetteDerivMat = su2PlaquetteDerivMat + getSu2Staple(field, site, matIdx, dir1, false);
-      // su2PlaquetteDerivMat = su2PlaquetteDerivMat + getSu2Staple(field, site, matIdx, dir2, true);
-      // su2PlaquetteDerivMat = su2PlaquetteDerivMat + getSu2Staple(field, site, matIdx, dir2, false);
+      Matrix su2PlaquetteDerivMat = getSu2Staple(field, site, matIdx, dir1, true);
+      su2PlaquetteDerivMat = su2PlaquetteDerivMat + getSu2Staple(field, site, matIdx, dir1, false);
+      su2PlaquetteDerivMat = su2PlaquetteDerivMat + getSu2Staple(field, site, matIdx, dir2, true);
+      su2PlaquetteDerivMat = su2PlaquetteDerivMat + getSu2Staple(field, site, matIdx, dir2, false);
 
-      // grad = grad - 2.0/pow(gaugeCoupling_,2)*su2PlaquetteDerivMat;
+      grad = grad - 2.0/pow(gaugeCoupling_,2)*su2PlaquetteDerivMat;
 
       // Derivative of kinetic term
       LATfield2::Site tempSite(site);
@@ -118,7 +118,7 @@ namespace monsta {
       Matrix kineticDerivMat = -scalarField*scalarFieldShifted*cos(real(u1GaugeField))*identity;
       kineticDerivMat = kineticDerivMat + 1i*scalarField*scalarFieldShifted*sin(real(u1GaugeField))*pauli3;
 
-      // grad = grad + kineticDerivMat;
+      grad = grad + kineticDerivMat;
 
       // grad = grad - 0.5*trace(grad*conjugateTranspose(getSu2Link(field, site, matIdx)))*getSu2Link(field, site, matIdx);
 
@@ -135,9 +135,9 @@ namespace monsta {
           int dir2 = (ii + 2) % 3;
           tempSite = site - dir1;
           std::complex<double> u1PlaquetteDeriv = -2.0*getU1Plaquette(field, site, ii, dir1);
-          u1PlaquetteDeriv = u1PlaquetteDeriv - 2.0*getU1Plaquette(field, tempSite, ii, dir1);
+          u1PlaquetteDeriv = u1PlaquetteDeriv +2.0*getU1Plaquette(field, tempSite, ii, dir1);
           tempSite = site - dir2;
-          u1PlaquetteDeriv = u1PlaquetteDeriv = +2.0*getU1Plaquette(field, site, ii, dir2);
+          u1PlaquetteDeriv = u1PlaquetteDeriv -2.0*getU1Plaquette(field, site, ii, dir2);
           u1PlaquetteDeriv = u1PlaquetteDeriv +2.0*getU1Plaquette(field, tempSite, ii, dir2);
 
           u1Deriv -= 1.0/(4*(pow(gaugeCoupling_,2)*pow(tan(mixingAngle_),2)))*u1PlaquetteDeriv;
@@ -151,7 +151,7 @@ namespace monsta {
           std::complex<double> u1KineticDeriv = scalarField*scalarFieldShifted*imag(trace(su2GaugeMat*pauli3))*cos(real(u1GaugeField));
           u1KineticDeriv = u1KineticDeriv + scalarField*scalarFieldShifted*real(trace(su2GaugeMat))*sin(real(u1GaugeField));
 
-          // u1Deriv += u1KineticDeriv;
+          u1Deriv += u1KineticDeriv;
 
           // Project perpendicular component:
           // u1Deriv = u1Deriv - real(u1Deriv*conj(u1GaugeField))*u1GaugeField;
@@ -180,11 +180,11 @@ namespace monsta {
             higgsKineticDeriv -= scalarFieldShiftedBwd*real(trace(su2GaugeMatShiftedBwd))*cos(real(u1GaugeFieldShiftedBwd));
             higgsKineticDeriv += scalarFieldShiftedBwd*imag(trace(su2GaugeMatShiftedBwd*pauli3))*sin(real(u1GaugeFieldShiftedBwd));
 
-            // grad(0,0) = grad(0,0) + higgsKineticDeriv;
+            grad(0,0) = grad(0,0) + higgsKineticDeriv;
           }
 
           // Derivative of Higgs Potential
-          // grad(0,0) = grad(0,0) + 8.0*selfCoupling_*getHiggsField(field, site)*(2.0*pow(getHiggsField(field, site),2) - pow(vev_, 2));
+          grad(0,0) = grad(0,0) + 8.0*selfCoupling_*getHiggsField(field, site)*(2.0*pow(getHiggsField(field, site),2) - pow(vev_, 2));
         }
       }
     }
@@ -220,12 +220,7 @@ namespace monsta {
       {
         if (ii < 3) // Project to U(1)
         {
-          double norm = abs(getU1Link(field, site, ii));
-          field(site, matIdx, (ii + 1) % 2, (ii + 1) / 2) = field(site, matIdx, (ii + 1) % 2, (ii + 1) / 2) / norm;
-          if (norm == 0)
-          {
-            field(site, matIdx, (ii + 1) % 2, (ii + 1) / 2) = 1;
-          }
+          field(site, matIdx, (ii + 1) % 2, (ii + 1) / 2) = real(field(site, matIdx, (ii + 1) % 2, (ii + 1) / 2));
         }
         else
         {
@@ -402,7 +397,7 @@ namespace monsta {
 
     std::complex<double> zPlaquette = getU1Plaquette(field, site, dir1, dir2);
 
-    double magneticField = 2./gaugeCoupling_*arg(zPlaquette);
+    double magneticField = 1./(gaugeCoupling_*tan(mixingAngle_)) * real(zPlaquette);
 
     return (magneticField);
   }

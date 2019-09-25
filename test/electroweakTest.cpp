@@ -1,6 +1,6 @@
 #include "LATfield2.hpp"
 #include <complex>
-#include "../src/ElectroweakTheoryNonCompact.hpp"
+#include "../src/ElectroweakTheory.hpp"
 #include "../src/Matrix.hpp"
 #include "../src/TheoryChecker.hpp"
 #include "../src/GradDescentSolverBBStep.hpp"
@@ -79,14 +79,14 @@ int main(int argc, char **argv)
   monsta::ElectroweakTheory theory(gaugeCoupling, mixingAngle, vev, selfCoupling);
   monsta::GeorgiGlashowSu2Theory ggTheory(gaugeCoupling, vev, selfCoupling);
 
-  monsta::setRandomField(field, theory);
+  monsta::setVacuumField(field, theory);
   // monsta::readRawField(field, inputPath + "/rawData");
-  // monsta::addConstantMagneticField(field, ggTheory, 1);
+  monsta::addConstantMagneticField(field, theory, 1);
   theory.applyBoundaryConditions(field);
 
-  double tol = 1e-4;
-  monsta::TheoryChecker gradChecker(tol);
-  gradChecker.checkGradients(theory, field);
+  double tol = 1e-8;
+  // monsta::TheoryChecker gradChecker(tol);
+  // gradChecker.checkGradients(theory, field);
 
   double initialStep = 0.01;
   double maxStepSize = 0.05;
@@ -98,10 +98,10 @@ int main(int argc, char **argv)
   {
     for (int ii = 0; ii < 3; ii++)
     {
-      std::vector<double> su2Vec = monsta::su2ToVec(monsta::Matrix(field, site, ii));
+      // std::vector<double> su2Vec = monsta::su2ToVec(monsta::Matrix(field, site, ii));
       // field(site, 3, (ii + 1) % 2, (ii + 1) / 2) = cos(su2Vec[2]) - 1i*sin(su2Vec[2]);
+      // field(site, 3, (ii + 1) % 2, (ii + 1) / 2) = -su2Vec[2];
     }
-    field(site, 3, 0, 0) = vev/sqrt(2);
   }
   theory.applyBoundaryConditions(field);
 

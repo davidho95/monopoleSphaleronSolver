@@ -389,18 +389,18 @@ namespace monsta {
     int dir2 = (cpt + 2) % 3;
 
 
-    // LATfield2::Site tempSite(site);
-    // std::complex<double> zPlaquette = field(site, dir1, 0, 0);
-    // tempSite = tempSite+dir1;
-    // zPlaquette = zPlaquette*field(tempSite, dir2, 0, 0);
-    // tempSite = tempSite-dir1+dir2;
-    // zPlaquette = zPlaquette*conj(field(tempSite, dir1, 0, 0));
-    // tempSite = tempSite-dir2;
-    // zPlaquette = zPlaquette*conj(field(tempSite, dir2, 0, 0));
+    LATfield2::Site tempSite(site);
+    std::complex<double> zPlaquette = field(site, dir1, 0, 0);
+    tempSite = tempSite+dir1;
+    zPlaquette = zPlaquette*field(tempSite, dir2, 0, 0);
+    tempSite = tempSite-dir1+dir2;
+    zPlaquette = zPlaquette*conj(field(tempSite, dir1, 0, 0));
+    tempSite = tempSite-dir2;
+    zPlaquette = zPlaquette*conj(field(tempSite, dir2, 0, 0));
 
-    std::complex<double> zPlaquette = getU1Plaquette(field, site, dir1, dir2);
+    std::complex<double> u1Plaquette = getU1Plaquette(field, site, dir1, dir2);
 
-    double magneticField = 2./gaugeCoupling_*arg(zPlaquette);
+    double magneticField = 2./gaugeCoupling_*arg(zPlaquette) + 2./(gaugeCoupling_*tan(mixingAngle_))*arg(u1Plaquette);
 
     return (magneticField);
   }
