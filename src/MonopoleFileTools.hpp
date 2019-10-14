@@ -3,7 +3,7 @@
 
 #include "LATfield2.hpp"
 #include <complex>
-#include "GeorgiGlashowSu2TheoryUnitary.hpp"
+// #include "GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "ElectroweakTheory.hpp"
 #include "Su2Tools.hpp"
 #include <cstdio>
@@ -87,28 +87,6 @@ namespace monsta
     parallel.barrier();
   }
 
-  void readHiggsField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
-  {
-    ifstream fileToRead;
-    std::string fileName = getFileName(fileBaseName);
-    fileToRead.open(fileName);
-
-    LATfield2::Site site(field.lattice());
-    std::string line;
-
-    for (site.first(); site.test(); site.next())
-    {
-      std::getline(fileToRead, line);
-      std::istringstream lineStream(line);
-      std::complex<double> value;
-      lineStream >> value;
-      field(site, 3, 0, 0) = value;
-    }
-
-    fileToRead.close();
-    parallel.barrier();
-  }
-
   void writeCoords(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
   {
     ofstream fileStream;
@@ -165,7 +143,7 @@ namespace monsta
     // mergeFiles(fileBaseName);
   }
 
-  void writeHiggsFieldUnitary(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
+  void writeHiggsFieldMagnitude(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
   {
     ofstream fileStream;
     std::string fileName = getFileName(fileBaseName);
@@ -177,6 +155,25 @@ namespace monsta
     for (site.first(); site.test(); site.next())
     {
       fileStream << real(field(site, 3, 0, 0)) << std::endl;
+    }
+    fileStream.close();
+    parallel.barrier();
+
+    // mergeFiles(fileBaseName);
+  }
+
+  void writeHiggsFieldMagnitude(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::GeorgiGlashowSu2Theory &theory)
+  {
+    ofstream fileStream;
+    std::string fileName = getFileName(fileBaseName);
+    fileStream.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+
+    std::vector<double> su2Vec;
+    for (site.first(); site.test(); site.next())
+    {
+      fileStream << theory.getHiggsMagnitude(field, site) << std::endl;
     }
     fileStream.close();
     parallel.barrier();
@@ -238,19 +235,39 @@ namespace monsta
     fileStream.open(fileName);
 
     LATfield2::Site site(field.lattice());
-
-    std::vector<double> su2Vec;
     for (site.first(); site.test(); site.next())
     {
       for (int ii = 0; ii < 3; ii++)
       {
-        fileStream << arg(field(site, ii, 0, 0)) << " ";
+        std::vector<double> su2Vec = su2ToVec(Matrix(field, site, ii));
+        fileStream << su2Vec[2] << " ";
       }
       fileStream << endl;
     }
     fileStream.close();
     parallel.barrier();
   }
+
+  void writeUnitaryWField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
+  {
+    ofstream fileStream;
+    std::string fileName = getFileName(fileBaseName);
+    fileStream.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+    for (site.first(); site.test(); site.next())
+    {
+      for (int ii = 0; ii < 3; ii++)
+      {
+        std::vector<double> su2Vec = su2ToVec(Matrix(field, site, ii));
+        fileStream << su2Vec[0] << " " << su2Vec[1] << " ";
+      }
+      fileStream << endl;
+    }
+    fileStream.close();
+    parallel.barrier();
+  }
+
 
   void writeEnergyDensity(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::Theory &theory)
   {
