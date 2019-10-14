@@ -25,15 +25,13 @@ namespace monsta
     double stepSize_;
     double maxStepSize_;
     double maxGrad_ = 1e6;
-    double relEnergyChange = 1e6;
-    double energy;
-    double energyOld;
     bool isVerbose_ = true;
     int minSteps_ = 0;
     std::vector<int> skipCpts_;
-    LATfield2::Field< std::complex<double> > oldGrads_;
+    // LATfield2::Field< std::complex<double> > oldGrads;
 
-    void iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory);
+    void iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads);
+    void checkerboardUpdate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads, bool isEven, double &stepChangeNumerator, double &stepChangeDenominator, double &maxGrad);
   };
 
   GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize)
@@ -62,11 +60,12 @@ namespace monsta
 
   bool GradDescentSolver::solve(monsta::Theory &theory, LATfield2::Field< std::complex<double> > &field)
   {
-    energy = theory.computeEnergy(field);
-    oldGrads_.initialize(field.lattice(), field.rows(), field.cols(), field.symmetry());
-    oldGrads_.alloc();
+    double energy = theory.computeEnergy(field);
+    double relEnergyChange = 1e6;
+    double energyOld;
+    LATfield2::Field< std::complex<double> > oldGrads(field.lattice(), field.rows(), field.cols(), field.symmetry());
 
-    iterate(field, theory);
+    iterate(field, theory, oldGrads);
     energyOld = energy;
     energy = theory.computeEnergy(field);
     relEnergyChange = (energy - energyOld);
@@ -75,27 +74,27 @@ namespace monsta
     while (numIters < minSteps_)
     {
       numIters++;
-      iterate(field, theory);
+      iterate(field, theory, oldGrads);
       energyOld = energy;
       energy = theory.computeEnergy(field);
       relEnergyChange = (energy - energyOld);
       if (isVerbose_)
       {
         COUT << energy << std::endl;
-        // COUT << maxGrad_ << std::endl;
+        COUT << maxGrad_ << std::endl;
       }
     }
     while (abs(relEnergyChange) > tol_ && numIters < maxIterations_)
     {
       numIters++;
-      iterate(field, theory);
+      iterate(field, theory, oldGrads);
       energyOld = energy;
       energy = theory.computeEnergy(field);
       relEnergyChange = (energy - energyOld);
       if (isVerbose_)
       {
         COUT << energy << std::endl;
-        // COUT << maxGrad_ << std::endl;
+        COUT << maxGrad_ << std::endl;
       }
     }
 
@@ -107,138 +106,22 @@ namespace monsta
       return true;
     } else {
       COUT << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
-      // COUT << "Maximum gradient: " << maxGrad_ << std::endl;
       COUT << "Energy reached: " << finalEnergy << std::endl;
       return false;
     }
-    parallel.barrier();
   }
 
-  void GradDescentSolver::iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory)
+  void GradDescentSolver::iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads)
   {
-    clock_t begin = clock();
-    LATfield2::Site site(field.lattice());
-    int numRows = field.rows();
-    int numCols = field.cols();
-    int numMatrices = field.components() / (numRows*numCols);
-
-    std::vector< std::complex<double> > gradVals(numRows*numCols*numMatrices);
-    int vecIdx;
-    monsta::Matrix gradMat(numRows);
-    std::complex<double> gradVal;
-    std::complex<double> oldGradVal;
-    std::complex<double> fieldVal;
-
     double stepChangeNumerator = 0;
     double stepChangeDenominator = 0;
 
     double maxGrad = 0;
-    for (site.first(); site.test(); site.next())
-    {
-      if (site.index() % 2 == 1) { continue; }
-      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
-      {
-        gradMat = theory.getLocalGradient(field, site, matIdx);
-        bool skip = false;
-        for (int ii = 0; ii < skipCpts_.size(); ii++)
-        {
-          if (matIdx == skipCpts_[ii])
-          { 
-            skip = true;
-            continue;
-          }
-        }
-        if (skip) { continue; }
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-        {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
-          {
-            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
-            gradVal = gradMat(rowIdx, colIdx);
-            gradVals[vecIdx] = gradVal;
-            // if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
-            if (matIdx == 3)
-            {
-              if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
-              oldGradVal = oldGrads_(site, rowIdx, colIdx);
 
-              stepChangeNumerator += abs(real(oldGradVal) * (real(oldGradVal - gradVal)));
-              stepChangeNumerator += abs(imag(oldGradVal) * (imag(oldGradVal - gradVal)));
-
-              stepChangeDenominator += pow(abs(gradVal - oldGradVal),2);
-              oldGrads_(site, rowIdx, colIdx) = gradVal;
-            }
-          }
-        }
-      }
-      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
-      {
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-        {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
-          {
-            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
-            fieldVal = field(site, matIdx, rowIdx, colIdx);
-            field(site, matIdx, rowIdx, colIdx) = fieldVal - stepSize_*gradVals[vecIdx];
-          }
-        }
-        theory.postProcess(field, site, matIdx);
-      }
-    }
-
-
-    for (site.first(); site.test(); site.next())
-    {
-      if (site.index() % 2 == 0) { continue; }
-      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
-      {
-        gradMat = theory.getLocalGradient(field, site, matIdx);
-        bool skip = false;
-        for (int ii = 0; ii < skipCpts_.size(); ii++)
-        {
-          if (matIdx == skipCpts_[ii])
-          { 
-            skip = true;
-            continue;
-          }
-        }
-        if (skip) { continue; }
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-        {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
-          {
-            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
-            gradVal = gradMat(rowIdx, colIdx);
-            gradVals[vecIdx] = gradVal;
-            // if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
-            if (matIdx == 3)
-            {
-              if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
-              oldGradVal = oldGrads_(site, rowIdx, colIdx);
-
-              stepChangeNumerator += abs(real(oldGradVal) * (real(oldGradVal - gradVal)));
-              stepChangeNumerator += abs(imag(oldGradVal) * (imag(oldGradVal - gradVal)));
-
-              stepChangeDenominator += pow(abs(gradVal - oldGradVal),2);
-              oldGrads_(site, rowIdx, colIdx) = gradVal;
-            }
-          }
-        }
-      }
-      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
-      {
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-        {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
-          {
-            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
-            fieldVal = field(site, matIdx, rowIdx, colIdx);
-            field(site, matIdx, rowIdx, colIdx) = fieldVal - stepSize_*gradVals[vecIdx];
-          }
-        }
-        theory.postProcess(field, site, matIdx);
-      }
-    }
+    bool isEven = true;
+    checkerboardUpdate(field, theory, oldGrads, isEven, stepChangeNumerator, stepChangeDenominator, maxGrad);
+    isEven = false;
+    checkerboardUpdate(field, theory, oldGrads, isEven, stepChangeNumerator, stepChangeDenominator, maxGrad);
 
     parallel.sum(stepChangeNumerator);
     parallel.sum(stepChangeDenominator);
@@ -248,12 +131,70 @@ namespace monsta
     if (stepSize_ > maxStepSize_) { stepSize_ = maxStepSize_; }
 
     theory.applyBoundaryConditions(field);
-    // double stepChange = system.updateGradientReturnStepChange();
-    // stepSize_ *= stepChange;
     maxGrad_ = maxGrad;
+  }
 
-    clock_t end = clock();
-    // COUT << double(end - begin) / CLOCKS_PER_SEC << endl;
+  void GradDescentSolver::checkerboardUpdate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads, bool isEven, double &stepChangeNumerator, double &stepChangeDenominator, double &maxGrad)
+  {
+    LATfield2::Site site(field.lattice());
+    int numRows = field.rows();
+    int numCols = field.cols();
+    int numMatrices = field.components() / (numRows*numCols);
+
+    for (site.first(); site.test(); site.next())
+    {
+      int vecIdx;
+      std::vector< std::complex<double> > gradVals(numRows*numCols*numMatrices);
+      if (site.index() % 2 == isEven) { continue; }
+      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
+      {
+        monsta::Matrix fieldMat(field, site, matIdx);
+        monsta::Matrix gradMat = theory.getLocalGradient(field, site, matIdx);
+        monsta::Matrix gradMatProj = gradMat;
+        if (matIdx < 3)
+        {
+          gradMatProj = gradMat - 0.5*real(trace(gradMat*conjugateTranspose(fieldMat)))*fieldMat;
+        }
+        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
+        {
+          for (int colIdx = 0; colIdx < numCols; colIdx++)
+          {
+            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
+            std::complex<double> gradVal = gradMat(rowIdx, colIdx);
+            gradVals[vecIdx] = gradVal;
+            std::complex<double> projGradVal = gradMatProj(rowIdx, colIdx);
+            if (matIdx != 3)
+            {
+              if (abs(projGradVal) > abs(maxGrad)) { maxGrad = abs(projGradVal); }
+            }
+            if (matIdx == 3)
+            {
+              // if (abs(projGradVal) > abs(maxGrad)) { maxGrad = abs(projGradVal); }
+              std::complex<double> oldGradVal = oldGrads(site, rowIdx, colIdx);
+
+              stepChangeNumerator += abs(real(oldGradVal) * (real(oldGradVal - gradVal)));
+              stepChangeNumerator += abs(imag(oldGradVal) * (imag(oldGradVal - gradVal)));
+
+              stepChangeDenominator += pow(abs(gradVal - oldGradVal),2);
+              oldGrads(site, rowIdx, colIdx) = gradVal;
+            }
+          }
+        }
+      }
+      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
+      {
+        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
+        {
+          for (int colIdx = 0; colIdx < numCols; colIdx++)
+          {
+            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
+            std::complex<double> fieldVal = field(site, matIdx, rowIdx, colIdx);
+            field(site, matIdx, rowIdx, colIdx) = fieldVal - stepSize_*gradVals[vecIdx];
+          }
+        }
+        theory.postProcess(field, site, matIdx);
+      }
+    }
   }
 }
 
