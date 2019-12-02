@@ -102,6 +102,7 @@ namespace monsta
     double zeroTol = 1e-15;
 
     double cosVecNorm = 0.5*real(trace(mat));
+    // cout << cosVecNorm << endl;
     if (abs(cosVecNorm - 1) < zeroTol)
     {
       return outputVec;
