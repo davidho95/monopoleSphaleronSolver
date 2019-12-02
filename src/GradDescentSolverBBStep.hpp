@@ -9,15 +9,14 @@ namespace monsta
   {
   public:
     GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize);
-    GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
     GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps);
+    GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps, bool minimiseGrad);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
     bool solve(monsta::Theory &theory, LATfield2::Field< std::complex<double> > &field);
 
     void setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize);
-    void setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
 
   private:
     double tol_;
@@ -27,7 +26,7 @@ namespace monsta
     double maxGrad_ = 1e6;
     bool isVerbose_ = true;
     int minSteps_ = 0;
-    std::vector<int> skipCpts_;
+    bool minimiseGrad_ = false;
     // LATfield2::Field< std::complex<double> > oldGrads;
 
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads);
@@ -36,10 +35,10 @@ namespace monsta
 
   GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize) {}
-  GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
-  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), skipCpts_(skipCpts) {}
     GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), minSteps_(minSteps) {}
+    GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps, bool minimiseGrad)
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), minSteps_(minSteps), minimiseGrad_(minimiseGrad) {}
 
   void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
@@ -47,15 +46,6 @@ namespace monsta
     maxIterations_ = maxIterations;
     stepSize_ = initialStepSize;
     maxStepSize_ = maxStepSize;
-  }
-
-  void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
-  {
-    tol_ = tol;
-    maxIterations_ = maxIterations;
-    stepSize_ = initialStepSize;
-    maxStepSize_ = maxStepSize;
-    skipCpts_ = skipCpts;
   }
 
   bool GradDescentSolver::solve(monsta::Theory &theory, LATfield2::Field< std::complex<double> > &field)
@@ -71,8 +61,10 @@ namespace monsta
     relEnergyChange = (energy - energyOld);
     int numIters = 1;
 
+    double maxGradOld = 1e6;
     while (numIters < minSteps_)
     {
+      maxGradOld = maxGrad_;
       numIters++;
       iterate(field, theory, oldGrads);
       energyOld = energy;
@@ -86,7 +78,9 @@ namespace monsta
     }
     while (abs(relEnergyChange) > tol_ && numIters < maxIterations_)
     {
+      if (minimiseGrad_ && maxGradOld < maxGrad_) { break; }
       numIters++;
+      maxGradOld = maxGrad_;
       iterate(field, theory, oldGrads);
       energyOld = energy;
       energy = theory.computeEnergy(field);
@@ -132,6 +126,7 @@ namespace monsta
 
     theory.applyBoundaryConditions(field);
     maxGrad_ = maxGrad;
+    parallel.max(maxGrad_);
   }
 
   void GradDescentSolver::checkerboardUpdate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads, bool isEven, double &stepChangeNumerator, double &stepChangeDenominator, double &maxGrad)
@@ -163,7 +158,7 @@ namespace monsta
             std::complex<double> gradVal = gradMat(rowIdx, colIdx);
             gradVals[vecIdx] = gradVal;
             std::complex<double> projGradVal = gradMatProj(rowIdx, colIdx);
-            if (matIdx != 3)
+            if (matIdx < 3)
             {
               if (abs(projGradVal) > abs(maxGrad)) { maxGrad = abs(projGradVal); }
             }
