@@ -7,9 +7,9 @@
 namespace monsta {
   class ElectroweakTheory: public Theory {
   public:
-    ElectroweakTheory(double gaugeCoupling, double mixingAngle, double vev, double selfCoupling);
-    ElectroweakTheory(double gaugeCoupling, double mixingAngle, double vev, double selfCoupling, std::vector<int> boundaryConditions);
-    ElectroweakTheory(double gaugeCoupling, double mixingAngle, double vev, double selfCoupling, std::vector<int> boundaryConditions, bool tHooftLine);
+    ElectroweakTheory(double gaugeCoupling, double tanSqMixingAngle, double vev, double selfCoupling);
+    ElectroweakTheory(double gaugeCoupling, double tanSqMixingAngle, double vev, double selfCoupling, std::vector<int> boundaryConditions);
+    ElectroweakTheory(double gaugeCoupling, double tanSqMixingAngle, double vev, double selfCoupling, std::vector<int> boundaryConditions, bool tHooftLine);
     double getLocalEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
     std::complex<double> getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx, int rowIdx, int colIdx) const;
     monsta::Matrix getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
@@ -18,12 +18,12 @@ namespace monsta {
     double getSelfCoupling() const { return selfCoupling_; }
     monsta::Matrix getSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const;
     std::complex<double> getU1Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const;
-    double getHiggsField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
+    double getHiggsMagnitude(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
     double getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
     void postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
     void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
 
-  private:
+  protected:
     void applyCPeriodicBoundaryConditions(LATfield2::Field< std::complex<double> > &field, int dir) const;
     monsta::Matrix getSu2Plaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const;
     std::complex<double> getU1Plaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const;
@@ -37,56 +37,58 @@ namespace monsta {
     double gaugeCoupling_;
     double vev_;
     double selfCoupling_;
-    double mixingAngle_;
+    double tanSqMixingAngle_;
     std::vector<int> boundaryConditions_ = {0, 0, 0};
     bool tHooftLine_ = false;
+    double n_ = 1;
 
     bool monopolesPresent_ = false;
     std::vector<int> monopolePos1_;
     std::vector<int> monopolePos2_;
   };
 
-  ElectroweakTheory::ElectroweakTheory(double gaugeCoupling, double mixingAngle, double vev, double selfCoupling)
-  : Theory(numFieldMatrices_, matSize_, matSize_), gaugeCoupling_(gaugeCoupling), mixingAngle_(mixingAngle), vev_(vev), selfCoupling_(selfCoupling)
+  ElectroweakTheory::ElectroweakTheory(double gaugeCoupling, double tanSqMixingAngle, double vev, double selfCoupling)
+  : Theory(numFieldMatrices_, matSize_, matSize_), gaugeCoupling_(gaugeCoupling), tanSqMixingAngle_(tanSqMixingAngle), vev_(vev), selfCoupling_(selfCoupling)
   {}
 
-  ElectroweakTheory::ElectroweakTheory(double gaugeCoupling, double mixingAngle, double vev, double selfCoupling, std::vector<int> boundaryConditions)
-  : Theory(numFieldMatrices_, matSize_, matSize_), gaugeCoupling_(gaugeCoupling), mixingAngle_(mixingAngle), vev_(vev), selfCoupling_(selfCoupling),
+  ElectroweakTheory::ElectroweakTheory(double gaugeCoupling, double tanSqMixingAngle, double vev, double selfCoupling, std::vector<int> boundaryConditions)
+  : Theory(numFieldMatrices_, matSize_, matSize_), gaugeCoupling_(gaugeCoupling), tanSqMixingAngle_(tanSqMixingAngle), vev_(vev), selfCoupling_(selfCoupling),
     boundaryConditions_(boundaryConditions)
   {}
 
-  ElectroweakTheory::ElectroweakTheory(double gaugeCoupling, double mixingAngle, double vev, double selfCoupling, std::vector<int> boundaryConditions, bool tHooftLine)
-  : Theory(numFieldMatrices_, matSize_, matSize_), gaugeCoupling_(gaugeCoupling), mixingAngle_(mixingAngle), vev_(vev), selfCoupling_(selfCoupling),
+  ElectroweakTheory::ElectroweakTheory(double gaugeCoupling, double tanSqMixingAngle, double vev, double selfCoupling, std::vector<int> boundaryConditions, bool tHooftLine)
+  : Theory(numFieldMatrices_, matSize_, matSize_), gaugeCoupling_(gaugeCoupling), tanSqMixingAngle_(tanSqMixingAngle), vev_(vev), selfCoupling_(selfCoupling),
     boundaryConditions_(boundaryConditions), tHooftLine_(tHooftLine)
   {}
 
   double ElectroweakTheory::getLocalEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
   {
     double E = 0;
-
     // Wilson action
     E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 1, 2))));
     E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 2, 0))));
     E += 2.0/pow(gaugeCoupling_,2)*(2 - real(trace(getSu2Plaquette(field, site, 0, 1))));
 
-    if (mixingAngle_ > 1e-6)
+    if (tanSqMixingAngle_ > 1e-6)
     {
-      E += 2.0/(pow(gaugeCoupling_,2)*pow(tan(mixingAngle_),2))*(1 - real(getU1Plaquette(field, site, 1, 2)));
-      E += 2.0/(pow(gaugeCoupling_,2)*pow(tan(mixingAngle_),2))*(1 - real(getU1Plaquette(field, site, 2, 0)));
-      E += 2.0/(pow(gaugeCoupling_,2)*pow(tan(mixingAngle_),2))*(1 - real(getU1Plaquette(field, site, 0, 1)));
+      E += 4.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 1, 2)));
+      E += 4.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 2, 0)));
+      E += 4.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 0, 1)));
     }
 
     // Covariant Derivative
     for (int ii = 0; ii < 3; ii++)
     {
       LATfield2::Site shiftedSite = site + ii;
-      E += 2*pow(getHiggsField(field, site),2);
-      E -= getHiggsField(field, site)*getHiggsField(field, shiftedSite)*real(trace(getSu2Link(field, site, ii)))*real(getU1Link(field, site, ii));
-      E += getHiggsField(field, site)*getHiggsField(field, shiftedSite)*imag(trace(getSu2Link(field, site, ii)*pauli3))*imag(getU1Link(field, site, ii));
+      E += n_*pow(getHiggsMagnitude(field, site),2);
+      E += n_*pow(getHiggsMagnitude(field, shiftedSite),2);
+      E -= n_*getHiggsMagnitude(field, site)*getHiggsMagnitude(field, shiftedSite)*real(trace(getSu2Link(field, site, ii)))*real(getU1Link(field, site, ii));
+      E += n_*getHiggsMagnitude(field, site)*getHiggsMagnitude(field, shiftedSite)*imag(trace(getSu2Link(field, site, ii)*pauli3))*imag(getU1Link(field, site, ii));
     }
 
     // Higgs Potential
-    E += real(selfCoupling_*pow(2.0*pow(getHiggsField(field, site),2) - pow(vev_, 2),2));
+    E += real(selfCoupling_*pow(2*pow(getHiggsMagnitude(field, site),2) - pow(vev_, 2),2));
+
 
     return E;
   }
@@ -110,15 +112,15 @@ namespace monsta {
       // Derivative of kinetic term
       LATfield2::Site tempSite(site);
       tempSite = site + matIdx;
-      double scalarField = getHiggsField(field, site);
-      double scalarFieldShifted = getHiggsField(field, tempSite);
+      double scalarField = getHiggsMagnitude(field, site);
+      double scalarFieldShifted = getHiggsMagnitude(field, tempSite);
       Matrix su2GaugeMat = getSu2Link(field, site, matIdx);
       std::complex<double> u1GaugeField = getU1Link(field, site, matIdx);
 
       Matrix kineticDerivMat = -scalarField*scalarFieldShifted*real(u1GaugeField)*identity;
       kineticDerivMat = kineticDerivMat + 1i*scalarField*scalarFieldShifted*imag(u1GaugeField)*pauli3;
 
-      grad = grad + kineticDerivMat;
+      grad = grad + n_*kineticDerivMat;
 
       // grad = grad - 0.5*trace(grad*conjugateTranspose(getSu2Link(field, site, matIdx)))*getSu2Link(field, site, matIdx);
 
@@ -136,20 +138,23 @@ namespace monsta {
           u1PlaquetteDeriv = u1PlaquetteDeriv + getU1Staple(field, site, ii, dir2, true);
           u1PlaquetteDeriv = u1PlaquetteDeriv + getU1Staple(field, site, ii, dir2, false);
 
-          u1Deriv -= 2.0/(pow(gaugeCoupling_,2)*pow(tan(mixingAngle_),2))*u1PlaquetteDeriv;
+          if (tanSqMixingAngle_ > 1e-6)
+          {
+            u1Deriv -= 4.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*u1PlaquetteDeriv;
+          }
 
           // Derivative of kinetic term
           LATfield2::Site tempSite(site);
           tempSite = site + ii;
-          double scalarField = getHiggsField(field, site);
-          double scalarFieldShifted = getHiggsField(field, tempSite);
+          double scalarField = getHiggsMagnitude(field, site);
+          double scalarFieldShifted = getHiggsMagnitude(field, tempSite);
           Matrix su2GaugeMat = getSu2Link(field, site, ii);
           std::complex<double> u1GaugeField = getU1Link(field, site, ii);
 
           std::complex<double> u1KineticDeriv = 1i*scalarField*scalarFieldShifted*imag(trace(su2GaugeMat*pauli3));
           u1KineticDeriv = u1KineticDeriv - scalarField*scalarFieldShifted*real(trace(su2GaugeMat));
 
-          u1Deriv += u1KineticDeriv;
+          u1Deriv += n_*u1KineticDeriv;
 
           // Project perpendicular component:
           // u1Deriv = u1Deriv - real(u1Deriv*conj(u1GaugeField))*u1GaugeField;
@@ -161,14 +166,14 @@ namespace monsta {
           {
             // Deriviative of kinetic term
             LATfield2::Site tempSite = site + dir;
-            double scalarField = getHiggsField(field, site);
-            double scalarFieldShiftedFwd = getHiggsField(field, tempSite);
+            double scalarField = getHiggsMagnitude(field, site);
+            double scalarFieldShiftedFwd = getHiggsMagnitude(field, tempSite);
             Matrix su2GaugeMat = getSu2Link(field, site, dir);
             std::complex<double> u1GaugeField = getU1Link(field, site, dir);
 
             tempSite = site - dir;
             Matrix su2GaugeMatShiftedBwd = getSu2Link(field, tempSite, dir);
-            double scalarFieldShiftedBwd = getHiggsField(field, tempSite);
+            double scalarFieldShiftedBwd = getHiggsMagnitude(field, tempSite);
             std::complex<double> u1GaugeFieldShiftedBwd = getU1Link(field, tempSite, dir);
 
             double higgsKineticDeriv = 0;
@@ -178,11 +183,11 @@ namespace monsta {
             higgsKineticDeriv -= scalarFieldShiftedBwd*real(trace(su2GaugeMatShiftedBwd))*real(u1GaugeFieldShiftedBwd);
             higgsKineticDeriv += scalarFieldShiftedBwd*imag(trace(su2GaugeMatShiftedBwd*pauli3))*imag(u1GaugeFieldShiftedBwd);
 
-            grad(0,0) = grad(0,0) + higgsKineticDeriv;
+            grad(0,0) = grad(0,0) + n_*higgsKineticDeriv;
           }
 
           // Derivative of Higgs Potential
-          grad(0,0) = grad(0,0) + 8.0*selfCoupling_*getHiggsField(field, site)*(2.0*pow(getHiggsField(field, site),2) - pow(vev_, 2));
+          grad(0,0) = grad(0,0) + 8.0*selfCoupling_*getHiggsMagnitude(field, site)*(2*pow(getHiggsMagnitude(field, site),2) - pow(vev_, 2));
         }
       }
     }
@@ -272,13 +277,13 @@ namespace monsta {
                 boundaryMat = pauli3*boundaryMat*pauli3;
                 break;
             }
-            // if (tHooftLine_ && dir == 2 && site.coord(1) == 0)
-            // {
-            //   if (matIdx == 1)
-            //   {
-            //     boundaryMat = -1.0*boundaryMat;
-            //   }
-            // }
+            if (tHooftLine_ && dir == 2 && site.coord(1) == 0)
+            {
+              if (matIdx == 1)
+              {
+                boundaryMat = -1.0*boundaryMat;
+              }
+            }
           }
           else
           {
@@ -286,6 +291,13 @@ namespace monsta {
             {
               if (ii < 3)
               {
+                if (tHooftLine_ && dir == 2 && site.coord(1) == 0)
+                {
+                  if (ii == 1)
+                  {
+                    boundaryMat((ii + 1) % 2, (ii + 1) / 2) = -boundaryMat((ii + 1) % 2, (ii + 1) / 2);
+                  }
+                }
                 if (pauliMatNum != 0)
                 {
                   boundaryMat((ii + 1) % 2, (ii + 1) / 2) = conj(boundaryMat((ii + 1) % 2, (ii + 1) / 2));
@@ -400,7 +412,11 @@ namespace monsta {
 
     std::complex<double> u1Plaquette = getU1Plaquette(field, site, dir1, dir2);
 
-    double magneticField = 2./gaugeCoupling_*arg(zPlaquette) + 2./(gaugeCoupling_*tan(mixingAngle_))*arg(u1Plaquette);
+    double magneticField =  2./gaugeCoupling_*arg(zPlaquette);
+    if (tanSqMixingAngle_ > 1e-6)
+    {
+      magneticField += 2./(gaugeCoupling_*sqrt(tanSqMixingAngle_)) * arg(u1Plaquette);
+    }
 
     return (magneticField);
   }
@@ -415,7 +431,7 @@ namespace monsta {
     return field(site, 3, (cpt+ 1) % 2, (cpt + 1) / 2);
   }
 
-  double ElectroweakTheory::getHiggsField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
+  double ElectroweakTheory::getHiggsMagnitude(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
   {
     return real(field(site, 3, 0, 0));
   }
