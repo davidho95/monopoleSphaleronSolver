@@ -14,7 +14,7 @@
 namespace monsta
 {
 
-  std::vector<int> findMonopole(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
+  std::vector<int> findMonopole(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory)
   {
     LATfield2::Site site(field.lattice());
     LATfield2::Site shiftedSite(field.lattice());
@@ -33,7 +33,8 @@ namespace monsta
         divB -= theory.getMagneticField(field, site, ii);
       }
 
-      if (abs(divB) > 16*atan(1) / (theory.getGaugeCoupling()) - 1)
+      double zeroTol = 0.1;
+      if (abs(divB) > zeroTol)
       {
         monopoleX = site.coord(0);
         monopoleY = site.coord(1);
@@ -190,7 +191,7 @@ void interpolateFields(LATfield2::Field< std::complex<double> > &field1,
 }
 
 void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleField,
-  LATfield2::Field< std::complex<double> > &pairField, monsta::GeorgiGlashowSu2Theory &theory, int separation)
+  LATfield2::Field< std::complex<double> > &pairField, monsta::Theory &theory, int separation)
 {
   LATfield2::Site site(singlePoleField.lattice());
 
@@ -513,12 +514,13 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
   }
 
 void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, monsta::ElectroweakTheory &theory,
-  int fluxQuanta)
+  int fluxQuanta, int fieldDir = 0)
   {
 
     LATfield2::Site site(field.lattice());
     double vev = theory.getVev();
     double gaugeCoupling = theory.getGaugeCoupling();
+    std::vector<int> latSize = {field.lattice().size(0), field.lattice().size(1), field.lattice().size(2)};
     int xSize = field.lattice().size(0);
     int ySize = field.lattice().size(1);
     int zSize = field.lattice().size(2);
@@ -529,25 +531,29 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
 
     for (site.first(); site.test(); site.next())
     {
+      std::vector<int> coords = {site.coord(0), site.coord(1), site.coord(2)};
       int xCoord = site.coord(0);
       int yCoord = site.coord(1);
       int zCoord = site.coord(2);
+
+      int dir1 = (fieldDir + 1) % 3;
+      int dir2 = (fieldDir + 2) % 3;
 
       // SU(2) gauge field
       for (int ii = 0; ii < 3; ii++)
       {
         std::vector<double> su2Vec = monsta::su2ToVec(Matrix(field, site, ii));
-        if (ii == 2)
+        if (ii == dir2)
         {
-          su2Vec[2] -= 0.5*flux/pow(ySize,2)*(yCoord - 0.5);
-          if (yCoord > 0)
+          su2Vec[2] -= 0.5*flux/pow(latSize[dir1],2)*(coords[dir1] - 0.5);
+          if (coords[dir1] > 0)
           {
-            su2Vec[2] += 0.5*flux/ySize;
+            su2Vec[2] += 0.5*flux/latSize[dir1];
           }
         }
-        if (ii == 1 && yCoord == 0)
+        if (ii == dir1 && coords[dir1] == 0)
         {
-          su2Vec[2] += 0.5*zCoord*flux/zSize;
+          su2Vec[2] += 0.5*coords[dir2]*flux/latSize[dir2];
         }
         monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
         field(site, ii, 0, 0) = su2Mat(0, 0);
@@ -556,21 +562,21 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
         field(site, ii, 1, 1) = su2Mat(1, 1);
       }
 
-      // U(1) guage field
+      // U(1) gauge field
       for (int ii = 0; ii < 3; ii++)
       {
         double u1Angle = arg(theory.getU1Link(field, site, ii));
-        if (ii == 2)
+        if (ii == dir2)
         {
-          u1Angle += 0.5*flux/pow(ySize,2)*(yCoord - 0.5);
-          if (yCoord > 0)
+          u1Angle += 0.5*flux/pow(latSize[dir1],2)*(coords[dir1] - 0.5);
+          if (coords[dir1] > 0)
           {
-            u1Angle -= 0.5*flux/ySize;
+            u1Angle -= 0.5*flux/latSize[dir1];
           }
         }
-        if (ii == 1 && yCoord == 0)
+        if (ii == dir1 && coords[dir1] == 0)
         {
-          u1Angle -= 0.5*zCoord*flux/zSize;
+          u1Angle -= 0.5*coords[dir2]*flux/latSize[dir2];
         }
         std::complex<double> u1Field = cos(u1Angle) + 1i*sin(u1Angle);
         field(site, 3, (ii + 1) % 2, (ii + 1) / 2) = u1Field;
@@ -581,6 +587,28 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
   }
 
   void scaleVev(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory)
+  {
+    LATfield2::Site site(field.lattice());
+    double oldVev = 0;
+    for (site.first(); site.test(); site.next())
+    {
+      if (abs(field(site, 3, 0, 0))*sqrt(2) > oldVev)
+      {
+        oldVev = abs(field(site, 3, 0, 0))*sqrt(2);
+      }
+    }
+    parallel.max(oldVev);
+    
+    double higgsRatio = theory.getVev() / oldVev;
+
+    for (site.first(); site.test(); site.next())
+    {
+      field(site, 3, 0, 0) *= higgsRatio;
+    }
+    theory.applyBoundaryConditions(field);
+  }
+
+  void scaleVev(LATfield2::Field< std::complex<double> > &field, monsta::ElectroweakTheory &theory)
   {
     LATfield2::Site site(field.lattice());
     double oldVev = 0;

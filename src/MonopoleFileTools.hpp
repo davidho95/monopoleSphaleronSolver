@@ -5,6 +5,7 @@
 #include <complex>
 // #include "GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "ElectroweakTheory.hpp"
+#include "ElectroweakTheoryNonUnitary.hpp"
 #include "Su2Tools.hpp"
 #include <cstdio>
 #include <iostream>
@@ -135,7 +136,7 @@ namespace monsta
 
     for (site.first(); site.test(); site.next())
     {
-      fileStream << theory.getHiggsField(field, site) << endl;
+      fileStream << theory.getHiggsMagnitude(field, site) << endl;
     }
     fileStream.close();
     parallel.barrier();
