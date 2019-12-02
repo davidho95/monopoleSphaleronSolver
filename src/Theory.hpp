@@ -23,6 +23,9 @@ namespace monsta
     virtual std::complex<double> getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx, int rowIdx, int colIdx) const = 0;
     virtual monsta::Matrix getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const = 0;
     virtual void postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const = 0;
+    virtual monsta::Matrix getSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const = 0;
+    virtual std::complex<double> getU1Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const = 0;
+    virtual double getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const = 0;
 
   protected:
     int numFieldMatrices_ = 1;
