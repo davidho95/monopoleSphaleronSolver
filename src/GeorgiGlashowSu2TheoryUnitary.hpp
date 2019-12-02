@@ -21,6 +21,7 @@ namespace monsta {
     int getMonopoleNumber(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
     void postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
     void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
+    double getHiggsMagnitude(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
 
   private:
     bool tHooftLineCheck(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
@@ -31,8 +32,7 @@ namespace monsta {
     void applyTwistedBoundaryConditions3(LATfield2::Field< std::complex<double> > &field, int dir) const;
     monsta::Matrix getPlaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const;
     monsta::Matrix getStaple(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp) const;
-    double getTHooftOperator(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir, std::complex<double> fluxQuanta=1) const;
-    monsta::Matrix getTHooftDeriv(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx, std::complex<double> fluxQuanta=1) const;
+    std::complex<double> getU1Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const;
 
     int numFieldMatrices_ = 4;
     int numRows_ = 2;
@@ -41,7 +41,7 @@ namespace monsta {
     double gaugeCoupling_;
     double vev_;
     double selfCoupling_;
-    std::vector<int> boundaryConditions_ = {1, 1, 1};
+    std::vector<int> boundaryConditions_ = {0, 0, 0};
     bool tHooftLine_ = false;
     std::complex<double> fluxQuanta_ = 1;
 
@@ -115,7 +115,7 @@ namespace monsta {
       Matrix covDeriv = field(tempSite, 3, 0, 0)*Matrix(field, site, ii)*pauli3*conjugateTranspose(Matrix(field, site, ii)) - field(site, 3, 0, 0)*pauli3;
       E += 0.5*real(trace(covDeriv*covDeriv));
       tempSite = site - ii;
-      covDeriv = field(site, 3, 0, 0)*Matrix(field, tempSite, ii)*pauli3*conjugateTranspose(Matrix(field, tempSite, ii)) - field(site, 3, 0, 0)*pauli3;
+      covDeriv = field(site, 3, 0, 0)*Matrix(field, tempSite, ii)*pauli3*conjugateTranspose(Matrix(field, tempSite, ii)) - field(tempSite, 3, 0, 0)*pauli3;
       E += 0.5*real(trace(covDeriv*covDeriv));
     }
 
@@ -155,7 +155,7 @@ namespace monsta {
       kineticDerivMat = kineticDerivMat - scalarMat*gaugeMat*scalarMatShifted;
       grad = grad + 2.*kineticDerivMat;
 
-      // grad = grad - 0.5*trace(grad*conjugateTranspose(Matrix(field, site, matIdx)))*Matrix(field, site, matIdx);
+      grad = grad - 0.5*trace(grad*conjugateTranspose(Matrix(field, site, matIdx)))*Matrix(field, site, matIdx);
 
     } else {
       for (int dir = 0; dir < 3; dir++)
@@ -192,44 +192,6 @@ namespace monsta {
     return 0;
   }
 
-  double GeorgiGlashowSu2Theory::getTHooftOperator(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir, std::complex<double> fluxQuanta) const
-  {
-    double E = 2.0/pow(gaugeCoupling_,2)*real(trace(getPlaquette(field, site, (dir + 1) % 3, (dir + 2) % 3))); // Subtracts unflipped plaquette
-    E += 2.0/pow(gaugeCoupling_,2)*real(trace(fluxQuanta*getPlaquette(field, site, (dir + 1) % 3, (dir + 2) % 3))); // Adds flipped plaquette
-    return E;
-  }
-
-  monsta::Matrix GeorgiGlashowSu2Theory::getTHooftDeriv(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx, std::complex<double> fluxQuanta) const
-  {
-    int dir1 = (matIdx + 1) % 3;
-    int dir2 = (matIdx + 2) % 3;
-    int derivIdx = site.index();
-
-    bool blah = false;
-
-    Matrix tHooftDerivMat(2);
-
-    if (tHooftLineCheck(field, site, dir2)) {
-      tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir1, true);
-    }
-    if (tHooftLineCheck(field, site, dir1)) {
-      tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir2, true);
-    }
-
-    LATfield2::Site tempSite(site);
-    tempSite = tempSite-dir1;
-    if (tHooftLineCheck(field, tempSite, dir2)) {
-      tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir1, false);
-    }
-
-    tempSite = tempSite+dir1-dir2;
-    if (tHooftLineCheck(field, tempSite, dir1)) {
-      tHooftDerivMat = tHooftDerivMat - 2*getStaple(field, site, matIdx, dir2, false);
-    }
-
-    return tHooftDerivMat;
-  }
-
   void GeorgiGlashowSu2Theory::postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const
   {
     if (matIdx < 3) // Project to SU(2)
@@ -253,28 +215,7 @@ namespace monsta {
 
   void GeorgiGlashowSu2Theory::applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const
   {
-    // if (boundaryConditions_[0] == 0 && boundaryConditions_[1] == 0 && boundaryConditions_[2] == 0)
-    // {
-    //   applyDirichletBoundaryConditions(field);
-    //   return;
-    // }
     field.updateHalo();
-    // if (boundaryConditions_[0] == 2 && boundaryConditions_[1] == 0 && boundaryConditions_[2] == 0)
-    // {
-    //   for (int dir = 0; dir < 3; dir++)
-    //   {
-    //     applyTwistedBoundaryConditions2(field, dir);
-    //   }
-    //   return;
-    // }
-    // if (boundaryConditions_[0] == -2 && boundaryConditions_[1] == 0 && boundaryConditions_[2] == 0)
-    // {
-    //   for (int dir = 0; dir < 3; dir++)
-    //   {
-    //     applyTwistedBoundaryConditions3(field, dir);
-    //   }
-    //   return;
-    // }   
     for (int dir = 0; dir < 3; dir++)
     {
       applyCPeriodicBoundaryConditions(field, dir);
@@ -386,70 +327,6 @@ namespace monsta {
     }
   }
 
-  // void GeorgiGlashowSu2Theory::applyTwistedBoundaryConditions2(LATfield2::Field< std::complex<double> > &field, int dir) const
-  // {
-  //   // cout << dir << endl;
-  //   LATfield2::Site site(field.lattice());
-
-  //   for (site.haloFirst(); site.haloTest(); site.haloNext())
-  //   {
-  //     int coord = site.coord(dir);
-  //     int maxCoord = field.lattice().size(dir) - 1;
-  //     if (coord < 0 || coord > maxCoord)
-  //     {
-  //       for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++) // Apply C-periodic boundary conditions
-  //       {
-  //         Matrix boundaryMat(field, site, matIdx);
-  //         if (dir == 0 && matIdx < 3)
-  //         {
-  //           boundaryMat = pauli2*boundaryMat*pauli2;
-  //         }
-  //         if (dir == 2 && site.coord(1) == 0)
-  //         {
-  //           if (matIdx == 1)
-  //           {
-  //             boundaryMat = -1.0*boundaryMat;
-  //           }
-  //         }
-  //         field(site, matIdx, 0, 0) = boundaryMat(0, 0);
-  //         field(site, matIdx, 0, 1) = boundaryMat(0, 1);
-  //         field(site, matIdx, 1, 0) = boundaryMat(1, 0);
-  //         field(site, matIdx, 1, 1) = boundaryMat(1, 1);
-  //       }
-  //     }
-  //   }
-  // }
-
-  // void GeorgiGlashowSu2Theory::applyTwistedBoundaryConditions3(LATfield2::Field< std::complex<double> > &field, int dir) const
-  // {
-  //   // cout << dir << endl;
-  //   LATfield2::Site site(field.lattice());
-
-  //   for (site.haloFirst(); site.haloTest(); site.haloNext())
-  //   {
-  //     int coord = site.coord(dir);
-  //     int maxCoord = field.lattice().size(dir) - 1;
-  //     if (coord < 0 || coord > maxCoord)
-  //     {
-  //       for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++) // Apply C-periodic boundary conditions
-  //       {
-  //         Matrix boundaryMat(field, site, matIdx);
-  //         if (dir == 2 && site.coord(1) == 0)
-  //         {
-  //           if (matIdx == 1)
-  //           {
-  //             boundaryMat = -1.0*boundaryMat;
-  //           }
-  //         }
-  //         field(site, matIdx, 0, 0) = boundaryMat(0, 0);
-  //         field(site, matIdx, 0, 1) = boundaryMat(0, 1);
-  //         field(site, matIdx, 1, 0) = boundaryMat(1, 0);
-  //         field(site, matIdx, 1, 1) = boundaryMat(1, 1);
-  //       }
-  //     }
-  //   }
-  // }
-
   monsta::Matrix GeorgiGlashowSu2Theory::getPlaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const
   {
     LATfield2::Site tempSite(site);
@@ -491,6 +368,17 @@ namespace monsta {
 
   }
 
+  std::complex<double> GeorgiGlashowSu2Theory::getU1Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
+  {
+    if (real(field(site, 3, 0, 0)) > 0)
+    {
+      return field(site, cpt, 0, 0);
+    } else
+    {
+      return field(site, cpt, 1, 1);
+    }
+  }
+
   double GeorgiGlashowSu2Theory::getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
   {
     int dir1 = (cpt + 1) % 3;
@@ -511,31 +399,9 @@ namespace monsta {
     return (magneticField);
   }
 
-  bool GeorgiGlashowSu2Theory::tHooftLineCheck(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const
+  double GeorgiGlashowSu2Theory::getHiggsMagnitude(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
   {
-    if (!tHooftLine_) { return false; }
-    int xCoord = site.coord(0);
-    int yCoord = site.coord(1);
-    int zCoord = site.coord(2);
-    int xSize = field.lattice().size(0);
-    int ySize = field.lattice().size(1);
-    int zSize = field.lattice().size(2);
-
-    // if (dir == 0 && yCoord == ySize/2 && zCoord == zSize/2)
-    // {
-    //   return true;
-    // }
-    // if (dir == 1 && xCoord == xSize/2 && zCoord == zSize/2)
-    // {
-    //   return true;
-    // }
-    // if (dir == 2 && yCoord == ySize/2 && xCoord == xSize/2)
-    // {
-    //   return true;
-    // }
-
-
-    return false;
+    return real(field(site, 3, 0, 0));
   }
 
   int GeorgiGlashowSu2Theory::getMonopoleNumber(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
