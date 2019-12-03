@@ -40,7 +40,6 @@ namespace monsta {
     double tanSqMixingAngle_;
     std::vector<int> boundaryConditions_ = {0, 0, 0};
     bool tHooftLine_ = false;
-    double n_ = 1;
 
     bool monopolesPresent_ = false;
     std::vector<int> monopolePos1_;
@@ -71,23 +70,23 @@ namespace monsta {
 
     if (tanSqMixingAngle_ > 1e-6)
     {
-      E += 4.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 1, 2)));
-      E += 4.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 2, 0)));
-      E += 4.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 0, 1)));
+      E += 2.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 1, 2)));
+      E += 2.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 2, 0)));
+      E += 2.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*(1 - real(getU1Plaquette(field, site, 0, 1)));
     }
 
     // Covariant Derivative
     for (int ii = 0; ii < 3; ii++)
     {
       LATfield2::Site shiftedSite = site + ii;
-      E += n_*pow(getHiggsMagnitude(field, site),2);
-      E += n_*pow(getHiggsMagnitude(field, shiftedSite),2);
-      E -= n_*getHiggsMagnitude(field, site)*getHiggsMagnitude(field, shiftedSite)*real(trace(getSu2Link(field, site, ii)))*real(getU1Link(field, site, ii));
-      E += n_*getHiggsMagnitude(field, site)*getHiggsMagnitude(field, shiftedSite)*imag(trace(getSu2Link(field, site, ii)*pauli3))*imag(getU1Link(field, site, ii));
+      E += pow(getHiggsMagnitude(field, site),2);
+      E += pow(getHiggsMagnitude(field, shiftedSite),2);
+      E -= getHiggsMagnitude(field, site)*getHiggsMagnitude(field, shiftedSite)*real(trace(getSu2Link(field, site, ii)))*real(getU1Link(field, site, ii));
+      E += getHiggsMagnitude(field, site)*getHiggsMagnitude(field, shiftedSite)*imag(trace(getSu2Link(field, site, ii)*pauli3))*imag(getU1Link(field, site, ii));
     }
 
     // Higgs Potential
-    E += real(selfCoupling_*pow(2*pow(getHiggsMagnitude(field, site),2) - pow(vev_, 2),2));
+    E += real(selfCoupling_*pow(pow(getHiggsMagnitude(field, site),2) - 0.5*pow(vev_, 2),2));
 
 
     return E;
@@ -120,7 +119,7 @@ namespace monsta {
       Matrix kineticDerivMat = -scalarField*scalarFieldShifted*real(u1GaugeField)*identity;
       kineticDerivMat = kineticDerivMat + 1i*scalarField*scalarFieldShifted*imag(u1GaugeField)*pauli3;
 
-      grad = grad + n_*kineticDerivMat;
+      grad = grad + kineticDerivMat;
 
       // grad = grad - 0.5*trace(grad*conjugateTranspose(getSu2Link(field, site, matIdx)))*getSu2Link(field, site, matIdx);
 
@@ -140,7 +139,7 @@ namespace monsta {
 
           if (tanSqMixingAngle_ > 1e-6)
           {
-            u1Deriv -= 4.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*u1PlaquetteDeriv;
+            u1Deriv -= 2.0/(pow(gaugeCoupling_,2)*tanSqMixingAngle_)*u1PlaquetteDeriv;
           }
 
           // Derivative of kinetic term
@@ -154,7 +153,7 @@ namespace monsta {
           std::complex<double> u1KineticDeriv = 1i*scalarField*scalarFieldShifted*imag(trace(su2GaugeMat*pauli3));
           u1KineticDeriv = u1KineticDeriv - scalarField*scalarFieldShifted*real(trace(su2GaugeMat));
 
-          u1Deriv += n_*u1KineticDeriv;
+          u1Deriv += u1KineticDeriv;
 
           // Project perpendicular component:
           // u1Deriv = u1Deriv - real(u1Deriv*conj(u1GaugeField))*u1GaugeField;
@@ -183,11 +182,11 @@ namespace monsta {
             higgsKineticDeriv -= scalarFieldShiftedBwd*real(trace(su2GaugeMatShiftedBwd))*real(u1GaugeFieldShiftedBwd);
             higgsKineticDeriv += scalarFieldShiftedBwd*imag(trace(su2GaugeMatShiftedBwd*pauli3))*imag(u1GaugeFieldShiftedBwd);
 
-            grad(0,0) = grad(0,0) + n_*higgsKineticDeriv;
+            grad(0,0) = grad(0,0) + higgsKineticDeriv;
           }
 
           // Derivative of Higgs Potential
-          grad(0,0) = grad(0,0) + 8.0*selfCoupling_*getHiggsMagnitude(field, site)*(2*pow(getHiggsMagnitude(field, site),2) - pow(vev_, 2));
+          grad(0,0) = grad(0,0) + 4.0*selfCoupling_*getHiggsMagnitude(field, site)*(pow(getHiggsMagnitude(field, site),2) - 0.5*pow(vev_, 2));
         }
       }
     }
@@ -412,13 +411,13 @@ namespace monsta {
 
     std::complex<double> u1Plaquette = getU1Plaquette(field, site, dir1, dir2);
 
-    double magneticField =  2./gaugeCoupling_*arg(zPlaquette);
+    double magneticFieldSq = pow(2./gaugeCoupling_*arg(zPlaquette), 2);
     if (tanSqMixingAngle_ > 1e-6)
     {
-      magneticField += 2./(gaugeCoupling_*sqrt(tanSqMixingAngle_)) * arg(u1Plaquette);
+      magneticFieldSq += pow(1./(gaugeCoupling_*sqrt(tanSqMixingAngle_)) * arg(u1Plaquette), 2);
     }
 
-    return (magneticField);
+    return sqrt(magneticFieldSq);
   }
 
   monsta::Matrix ElectroweakTheory::getSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
