@@ -108,10 +108,10 @@ int main(int argc, char **argv)
       coords[2] = site.coord(2) - zSz/2 + 0.5;
       double r = sqrt(pow(coords[0], 2) + pow(coords[1], 2) + pow(coords[2], 2) + 0.01);
       std::vector<double> gaugeFns(3);
-      gaugeFns[0] = 1/cosh(r/3);
-      gaugeFns[1] = 1/cosh(r/3);
-      gaugeFns[2] = 1/cosh(r/3);
-      double higgsFn = tanh(r/3);
+      gaugeFns[0] = 1/cosh(vev*gaugeCoupling*r/3);
+      gaugeFns[1] = 1/cosh(vev*gaugeCoupling*r/3);
+      gaugeFns[2] = 1/cosh(vev*gaugeCoupling*r/3);
+      double higgsFn = tanh(vev*gaugeCoupling*r/3);
       for (int ii = 0; ii < 3; ii++)
       {
         std::vector<double> su2Vec(3);
@@ -139,10 +139,10 @@ int main(int argc, char **argv)
   double E = theory.computeEnergy(field);
   COUT << E << endl;
 
-  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, 100, true);
+  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, 100/(gaugeCoupling*pow(vev,2)), true);
   solver.solve(theory, field);
 
-  solver = monsta::GradDescentSolver(tol, maxNumSteps, initialStep, maxStepSize, 200, true);
+  solver = monsta::GradDescentSolver(tol, maxNumSteps, initialStep, maxStepSize, 500/(gaugeCoupling*pow(vev,2)), true);
   solver.solve(theory, field);
 
   LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
   }
 
 
-  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 50000, initialStep, maxStepSize, 1.05, 0.5);
+  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 50000, initialStep, maxStepSize, 1.2, 0.5);
   chigusaSolver.solve(theory, field, referenceField);
 
   monsta::writeCoords(field, outputPath + "/coords");
@@ -193,5 +193,6 @@ int main(int argc, char **argv)
   monsta::writeHiggsField(field, outputPath + "/higgsData", theory);
   monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
   monsta::writeRawField(field, outputPath + "/rawData");
+  monsta::writeRawField(referenceField, outputPath + "/referenceRawData");
 
 }

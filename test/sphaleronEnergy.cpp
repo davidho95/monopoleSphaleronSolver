@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 
   double initialStep = 0.001;
   double maxStepSize = 0.005;
-  double tol = 5e-4;
+  double tol = 1e-3;
   int maxNumSteps = 200000;
   double abortGrad = 0.5;
 
@@ -124,14 +124,14 @@ int main(int argc, char **argv)
   for (int ii = 0; ii < numIncrements; ii++)
   {
     vev = vevs[ii];
-    monsta::GradDescentSolver minimiser(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling, 100);
+    monsta::GradDescentSolver minimiser(0, maxNumSteps, initialStep, maxStepSize*vev, 100/(gaugeCoupling*pow(vev,2)), true);
 
     monsta::ElectroweakTheory theory(gaugeCoupling, tanSqMixingAngle, vev, selfCoupling, {0, 0, 0}, false);
 
     monsta::scaleVev(field, theory);
     minimiser.solve(theory, field);
 
-    minimiser = monsta::GradDescentSolver(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling, 500);
+    minimiser = monsta::GradDescentSolver(0, 500/vev, initialStep, maxStepSize*vev, 500/(gaugeCoupling*pow(vev,2)), true);
     minimiser.solve(theory, field);
 
     for (site.first(); site.test(); site.next())
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
       }
     }
 
-    monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize*vev*gaugeCoupling, correctionCoeff, abortGrad);
+    monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize*vev, correctionCoeff, abortGrad);
     bool solved = chigusaSolver.solve(theory, field, referenceField);
 
     double E = theory.computeEnergy(field);
