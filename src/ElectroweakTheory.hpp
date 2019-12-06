@@ -411,13 +411,21 @@ namespace monsta {
 
     std::complex<double> u1Plaquette = getU1Plaquette(field, site, dir1, dir2);
 
-    double magneticFieldSq = pow(2./gaugeCoupling_*arg(zPlaquette), 2);
+    // double magneticFieldSq = pow(2./gaugeCoupling_*arg(zPlaquette), 2);
+    // if (tanSqMixingAngle_ > 1e-6)
+    // {
+    //   magneticFieldSq += pow(2./(gaugeCoupling_*sqrt(tanSqMixingAngle_)) * arg(u1Plaquette), 2);
+    // }
+
+    // double magneticField = 0;
+    double magneticField = 2./gaugeCoupling_*arg(zPlaquette);
     if (tanSqMixingAngle_ > 1e-6)
     {
-      magneticFieldSq += pow(1./(gaugeCoupling_*sqrt(tanSqMixingAngle_)) * arg(u1Plaquette), 2);
+      magneticField += 2/(gaugeCoupling_*sqrt(tanSqMixingAngle_)) * arg(u1Plaquette);
     }
 
-    return sqrt(magneticFieldSq);
+    return magneticField;
+    // return sqrt(magneticFieldSq);
   }
 
   monsta::Matrix ElectroweakTheory::getSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
