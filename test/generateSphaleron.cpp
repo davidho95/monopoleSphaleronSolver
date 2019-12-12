@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   int sz = 16;
   int n = 2;
   int m = 2;
-  double xAspect = 1;
+  double zAspect = 1;
   double vev = 1;
   double gaugeCoupling = 1;
   double mixingAngle = 2*atan(1) / 3;
@@ -25,6 +25,7 @@ int main(int argc, char **argv)
   int fluxQuanta = 0;
   std::string inputPath;
   std::string outputPath;
+  int extraSteps = 1000;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -57,12 +58,15 @@ int main(int argc, char **argv)
       case 'q':
         mixingAngle = atof(argv[++i]);
         break;
-      case 'x':
-        xAspect = atof(argv[++i]);
+      case 'z':
+        zAspect = atof(argv[++i]);
         break;
       case 'b':
         fluxQuanta = atoi(argv[++i]);
         break; 
+      case 'e':
+        extraSteps = atoi(argv[++i]);
+        break;
     }
   }
   parallel.initialize(n,m);
@@ -70,11 +74,11 @@ int main(int argc, char **argv)
   srand(1);
 
   int dim = 3;
-  int xSz = round(xAspect*sz);
+  int xSz = sz;
   int ySz = sz;
-  int zSz = sz;
+  int zSz = round(zAspect*sz);
   int latSize[dim] = {xSz, ySz, zSz};
-  int haloSize = 2;
+  int haloSize = 1;
   int numMatrices = 4;
   int numRows = 2;
   int numCols = 2;
@@ -139,10 +143,10 @@ int main(int argc, char **argv)
   double E = theory.computeEnergy(field);
   COUT << E << endl;
 
-  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, 100/(gaugeCoupling*pow(vev,2)), true);
+  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, 100, true);
   solver.solve(theory, field);
 
-  solver = monsta::GradDescentSolver(tol, maxNumSteps, initialStep, maxStepSize, 500/(gaugeCoupling*pow(vev,2)), true);
+  solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
   solver.solve(theory, field);
 
   LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
