@@ -33,7 +33,7 @@ int main(int argc, char **argv)
   double startVev;
   double endVev;
   double numIncrements;
-  double xAspect = 1;
+  double zAspect = 1;
   double correctionCoeff = 1.5;
   double tanSqMixingAngle = 0.268;
 
@@ -80,8 +80,8 @@ int main(int argc, char **argv)
       case 'I':
         numIncrements = atof(argv[++i]);
         break;
-      case 'x':
-        xAspect = atof(argv[++i]);
+      case 'z':
+        zAspect = atof(argv[++i]);
         break;
     }
   }
@@ -89,11 +89,11 @@ int main(int argc, char **argv)
   parallel.initialize(n,m);
 
   int dim = 3;
-  int xSz = round(xAspect*sz);
+  int xSz = sz;
   int ySz = sz;
-  int zSz = sz;
+  int zSz = round(zAspect*sz);
   int latSize[dim] = {xSz, ySz, zSz};
-  int haloSize = 2;
+  int haloSize = 1;
   int numMatrices = 4;
   int numRows = 2;
   int numCols = 2;
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 
   double initialStep = 0.001;
   double maxStepSize = 0.005;
-  double tol = 1e-3;
+  double tol = 5e-3;
   int maxNumSteps = 200000;
   double abortGrad = 0.5;
 
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
     monsta::scaleVev(field, theory);
     minimiser.solve(theory, field);
 
-    minimiser = monsta::GradDescentSolver(0, 500/vev, initialStep, maxStepSize*vev, 500/(gaugeCoupling*pow(vev,2)), true);
+    minimiser = monsta::GradDescentSolver(0, 500/vev, initialStep, maxStepSize*vev, 5000/vev, true);
     minimiser.solve(theory, field);
 
     for (site.first(); site.test(); site.next())
