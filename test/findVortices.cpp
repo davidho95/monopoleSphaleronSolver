@@ -18,6 +18,7 @@ int main(int argc, char **argv)
 {
   srand(time(NULL) + parallel.rank());
   std::string outputPath;
+  std::string inputPath;
   int sz = 16;
   int n = 2;
   int m = 2;
@@ -55,8 +56,12 @@ int main(int argc, char **argv)
       case 'b':
         fluxQuanta = atoi(argv[++i]);
         break;
+      case 'i':
+        inputPath = argv[++i];
+        break;
       case 'z':
         zAspect = atof(argv[++i]);
+        break;
     }
   }
 
@@ -87,22 +92,30 @@ int main(int argc, char **argv)
   monsta::setVacuumField(field, theory);
   theory.applyBoundaryConditions(field);
 
-  for (site.first(); site.test(); site.next())
+  if (inputPath != "")
   {
-    int yCoord = site.coord(1) - ySz / 2;
-    int zCoord = site.coord(2) - zSz / 2;
-
-    double r = sqrt(pow(yCoord,2) + pow(zCoord,2));
-
-    for (int ii = 0; ii < 3; ii++)
+    monsta::readRawField(field, inputPath + "/rawData");
+    theory.applyBoundaryConditions(field);
+  }
+  else
+  {
+    for (site.first(); site.test(); site.next())
     {
-      std::vector<double> su2Vec = {1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000)};
-      monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
-      field(site, ii, 0, 0) = su2Mat(0, 0);
-      field(site, ii, 0, 1) = su2Mat(0, 1);
-      field(site, ii, 1, 0) = su2Mat(1, 0);
-      field(site, ii, 1, 1) = su2Mat(1, 1);
-      theory.postProcess(field, site, ii);
+      int yCoord = site.coord(1) - ySz / 2;
+      int zCoord = site.coord(2) - zSz / 2;
+
+      double r = sqrt(pow(yCoord,2) + pow(zCoord,2));
+
+      for (int ii = 0; ii < 3; ii++)
+      {
+        std::vector<double> su2Vec = {1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000)};
+        monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
+        field(site, ii, 0, 0) = su2Mat(0, 0);
+        field(site, ii, 0, 1) = su2Mat(0, 1);
+        field(site, ii, 1, 0) = su2Mat(1, 0);
+        field(site, ii, 1, 1) = su2Mat(1, 1);
+        theory.postProcess(field, site, ii);
+      }
     }
   }
 
