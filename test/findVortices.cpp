@@ -6,7 +6,7 @@
 #include "../src/GradDescentSolverBBStep.hpp"
 #include "../src/Su2Tools.hpp"
 #include "../src/MonopoleFileTools.hpp"
-#include "../src/MonopoleFieldTools.hpp"
+#include "../src/ElectroweakFieldTools.hpp"
 #include <iostream>
 #include <fstream>
 #include <bits/stdc++.h> 
@@ -25,6 +25,7 @@ int main(int argc, char **argv)
   double vev = 1;
   double gaugeCoupling = 1;
   double selfCoupling = 1;
+  double tanSqMixingAngle = 0.286;
   double fluxQuanta = 1;
   double zAspect = 1;
 
@@ -62,6 +63,10 @@ int main(int argc, char **argv)
       case 'z':
         zAspect = atof(argv[++i]);
         break;
+      case 'q':
+        tanSqMixingAngle = atof(argv[++i]);
+        break;
+
     }
   }
 
@@ -79,14 +84,14 @@ int main(int argc, char **argv)
 
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
-  monsta::ElectroweakTheory theory(gaugeCoupling, 0.5, vev, selfCoupling);
+  monsta::ElectroweakTheory theory(gaugeCoupling, tanSqMixingAngle, vev, selfCoupling);
 
   LATfield2::Site site(lattice);
 
   double initialStep = 0.01;
   double maxStepSize = 0.01;
   double tol = 1e-6;
-  int minNumSteps = 10000;
+  int minNumSteps = 1000;
   int maxNumSteps = 200000;
 
   monsta::setVacuumField(field, theory);
