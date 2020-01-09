@@ -189,7 +189,7 @@ int main(int argc, char **argv)
   }
 
 
-  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 50000, initialStep, maxStepSize, 1.2, 0.5);
+  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 333000, initialStep, maxStepSize, 1.2, 0.5);
   chigusaSolver.solve(theory, field, referenceField);
 
   monsta::writeCoords(field, outputPath + "/coords");
