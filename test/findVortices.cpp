@@ -119,7 +119,8 @@ int main(int argc, char **argv)
     }
   }
 
-  monsta::addConstantMagneticField(field, theory, -fluxQuanta);
+  monsta::addConstantMagneticField(field, theory, fluxQuanta, 2);
+  theory.applyBoundaryConditions(field);
 
   monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, minNumSteps);
   solver.solve(theory, field);
