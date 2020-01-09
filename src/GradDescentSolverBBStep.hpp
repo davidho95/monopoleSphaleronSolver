@@ -76,7 +76,7 @@ namespace monsta
         COUT << maxGrad_ << std::endl;
       }
     }
-    while (abs(relEnergyChange) > tol_ && numIters < maxIterations_)
+    while (maxGrad_ > tol_ && numIters < maxIterations_)
     {
       if (minimiseGrad_ && maxGradOld < maxGrad_) { break; }
       numIters++;
