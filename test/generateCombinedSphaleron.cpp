@@ -109,8 +109,33 @@ int main(int argc, char **argv)
 
   monsta::addConstantMagneticField(sphaleronField, theory, -fluxQuanta, 2);
 
-  monsta::linearSuperpose(ambjornOlesenField, sphaleronField, combinedField, theory);
+  // monsta::linearSuperpose(ambjornOlesenField, sphaleronField, combinedField, theory);
+  // theory.applyBoundaryConditions(combinedField);
+
+  for (site.first(); site.test(); site.next())
+  {
+    std::vector<double> coords(3);
+    coords[0] = site.coord(0) - xSz/2 + 0.5;
+    coords[1] = site.coord(1) - ySz/2 + 0.5;
+    coords[2] = site.coord(2) - zSz/2 + 0.5;
+
+    if (abs(coords[0]) < 5 && abs(coords[1]))
+    {
+      combinedField(site, 0, 0) = sphaleronField(site, 0, 0);
+      combinedField(site, 0, 1) = sphaleronField(site, 0, 1);
+      combinedField(site, 1, 0) = sphaleronField(site, 1, 0);
+      combinedField(site, 1, 1) = sphaleronField(site, 1, 1);
+    }
+    else
+    {
+      combinedField(site, 0, 0) = ambjornOlesenField(site, 0, 0);
+      combinedField(site, 0, 1) = ambjornOlesenField(site, 0, 1);
+      combinedField(site, 1, 0) = ambjornOlesenField(site, 1, 0);
+      combinedField(site, 1, 1) = ambjornOlesenField(site, 1, 1);
+    }
+  }
   theory.applyBoundaryConditions(combinedField);
+
 
   double E = theory.computeEnergy(combinedField);
   COUT << E << endl;
