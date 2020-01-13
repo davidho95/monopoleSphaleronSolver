@@ -119,19 +119,22 @@ int main(int argc, char **argv)
     coords[1] = site.coord(1) - ySz/2 + 0.5;
     coords[2] = site.coord(2) - zSz/2 + 0.5;
 
-    if (abs(coords[0]) < 6 && abs(coords[1]) < 6)
+    for (int ii = 0; ii < numMatrices; ii++)
     {
-      combinedField(site, 0, 0) = sphaleronField(site, 0, 0);
-      combinedField(site, 0, 1) = sphaleronField(site, 0, 1);
-      combinedField(site, 1, 0) = sphaleronField(site, 1, 0);
-      combinedField(site, 1, 1) = sphaleronField(site, 1, 1);
-    }
-    else
-    {
-      combinedField(site, 0, 0) = ambjornOlesenField(site, 0, 0);
-      combinedField(site, 0, 1) = ambjornOlesenField(site, 0, 1);
-      combinedField(site, 1, 0) = ambjornOlesenField(site, 1, 0);
-      combinedField(site, 1, 1) = ambjornOlesenField(site, 1, 1);
+      if (abs(coords[0]) < 6 && abs(coords[1]) < 6)
+      {
+        combinedField(site, ii, 0, 0) = sphaleronField(site, ii, 0, 0);
+        combinedField(site, ii, 0, 1) = sphaleronField(site, ii, 0, 1);
+        combinedField(site, ii, 1, 0) = sphaleronField(site, ii, 1, 0);
+        combinedField(site, ii, 1, 1) = sphaleronField(site, ii, 1, 1);
+      }
+      else
+      {
+        combinedField(site, ii, 0, 0) = ambjornOlesenField(site, ii, 0, 0);
+        combinedField(site, ii, 0, 1) = ambjornOlesenField(site, ii, 0, 1);
+        combinedField(site, ii, 1, 0) = ambjornOlesenField(site, ii, 1, 0);
+        combinedField(site, ii, 1, 1) = ambjornOlesenField(site, ii, 1, 1);
+      }
     }
   }
   theory.applyBoundaryConditions(combinedField);
@@ -144,7 +147,7 @@ int main(int argc, char **argv)
   solver.solve(theory, combinedField);
 
   solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
-  solver.solve(theory, combinedField);
+  // solver.solve(theory, combinedField);
 
   LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
 
@@ -187,7 +190,7 @@ int main(int argc, char **argv)
 
 
   monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 333000, initialStep, maxStepSize, 1.05, 0.5);
-  chigusaSolver.solve(theory, combinedField, referenceField);
+  // chigusaSolver.solve(theory, combinedField, referenceField);
 
   monsta::writeCoords(combinedField, outputPath + "/coords");
   monsta::writeEnergyDensity(combinedField, outputPath + "/energyData", theory);
