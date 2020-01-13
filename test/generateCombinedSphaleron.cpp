@@ -107,7 +107,7 @@ int main(int argc, char **argv)
   monsta::readRawField(sphaleronField, sphaleronInputPath + "/rawData");
   theory.applyBoundaryConditions(sphaleronField);
 
-  monsta::addConstantMagneticField(sphaleronField, theory, -fluxQuanta, 2);
+  // monsta::addConstantMagneticField(sphaleronField, theory, -fluxQuanta, 2);
 
   // monsta::linearSuperpose(ambjornOlesenField, sphaleronField, combinedField, theory);
   // theory.applyBoundaryConditions(combinedField);
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
     coords[1] = site.coord(1) - ySz/2 + 0.5;
     coords[2] = site.coord(2) - zSz/2 + 0.5;
 
-    if (abs(coords[0]) < 5 && abs(coords[1]))
+    if (abs(coords[0]) < 6 && abs(coords[1]) < 6)
     {
       combinedField(site, 0, 0) = sphaleronField(site, 0, 0);
       combinedField(site, 0, 1) = sphaleronField(site, 0, 1);
