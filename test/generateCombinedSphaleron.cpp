@@ -147,7 +147,7 @@ int main(int argc, char **argv)
   solver.solve(theory, combinedField);
 
   solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
-  // solver.solve(theory, combinedField);
+  solver.solve(theory, combinedField);
 
   LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
 
@@ -189,8 +189,8 @@ int main(int argc, char **argv)
   }
 
 
-  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 333000, initialStep, maxStepSize, 1.05, 0.5);
-  // chigusaSolver.solve(theory, combinedField, referenceField);
+  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 333000, initialStep, maxStepSize, 1.2, 0.5);
+  chigusaSolver.solve(theory, combinedField, referenceField);
 
   monsta::writeCoords(combinedField, outputPath + "/coords");
   monsta::writeEnergyDensity(combinedField, outputPath + "/energyData", theory);
