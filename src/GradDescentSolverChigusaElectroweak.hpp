@@ -13,6 +13,8 @@ namespace monsta
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, std::vector<int> skipCpts);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad);
     GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad, int minSteps);
+    GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad, int minSteps, bool minimiseGrad);
+
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
@@ -32,22 +34,22 @@ namespace monsta
     double energyOld;
     bool isVerbose_ = true;
     double abortGrad_ = 1e6;
-    double correctionCoeff_ = 2;
-    std::vector<int> skipCpts_;
+    double correctionCoeff_ = 1.5;
     LATfield2::Field< std::complex<double> > oldGrads_;
     int minSteps_ = 0;
+    bool minimiseGrad_ = false;
 
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::ElectroweakTheory &theory, LATfield2::Field< std::complex<double> > &referenceField);
   };
 
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff) {}
-  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, std::vector<int> skipCpts)
-  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), skipCpts_(skipCpts) {}
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad) {}
   GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad, int minSteps)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad), minSteps_(minSteps) {}
+  GradDescentSolverChigusa::GradDescentSolverChigusa(double tol, int maxIterations, double initialStepSize, double maxStepSize, double correctionCoeff, double abortGrad, int minSteps, bool minimiseGrad)
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), correctionCoeff_(correctionCoeff), abortGrad_(abortGrad), minSteps_(minSteps), minimiseGrad_(minimiseGrad) {}
 
   void GradDescentSolverChigusa::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
@@ -55,15 +57,6 @@ namespace monsta
     maxIterations_ = maxIterations;
     stepSize_ = initialStepSize;
     maxStepSize_ = maxStepSize;
-  }
-
-  void GradDescentSolverChigusa::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts)
-  {
-    tol_ = tol;
-    maxIterations_ = maxIterations;
-    stepSize_ = initialStepSize;
-    maxStepSize_ = maxStepSize;
-    skipCpts_ = skipCpts;
   }
 
   bool GradDescentSolverChigusa::solve(monsta::ElectroweakTheory &theory, LATfield2::Field< std::complex<double> > &field, LATfield2::Field< std::complex<double> > &referenceField)
@@ -78,8 +71,10 @@ namespace monsta
     relEnergyChange = (energy - energyOld);
     int numIters = 1;
 
+    double maxGradOld = 1e6;
     while (numIters < minSteps_)
     {
+      maxGradOld = maxGrad_;
       numIters++;
       iterate(field, theory, referenceField);
       energyOld = energy;
@@ -89,13 +84,14 @@ namespace monsta
       {
         COUT << energy << std::endl;
         COUT << maxGrad_ << std::endl;
-        // COUT << stepSize_ << std::endl;
       }
     }
 
     while (maxGrad_ > tol_ && numIters < maxIterations_ && maxGrad_ < abortGrad_)
     {
+      if (minimiseGrad_ && maxGradOld < maxGrad_) { break; }
       numIters++;
+      maxGradOld = maxGrad_;
       iterate(field, theory, referenceField);
       energyOld = energy;
       energy = theory.computeEnergy(field);
@@ -104,7 +100,6 @@ namespace monsta
       {
         COUT << energy << std::endl;
         COUT << maxGrad_ << std::endl;
-        // COUT << stepSize_ << std::endl;
       }
     }
 
@@ -113,7 +108,6 @@ namespace monsta
     if (maxGrad_ > abortGrad_)
     {
       COUT << "Gradient descent aborted after exceeding maximum allowed gradient" << std::endl;
-      // COUT << "Maximum gradient: " << maxGrad_ << std::endl;
       COUT << "Energy reached: " << finalEnergy << std::endl;
       return false;
     }
@@ -126,7 +120,6 @@ namespace monsta
     else
     {
       COUT << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
-      // COUT << "Maximum gradient: " << maxGrad_ << std::endl;
       COUT << "Energy reached: " << finalEnergy << std::endl;
       return false;
     }
@@ -206,16 +199,6 @@ namespace monsta
           }
         }
         gradMat = gradMat - correctionCoeff_*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
-        bool skip = false;
-        for (int ii = 0; ii < skipCpts_.size(); ii++)
-        {
-          if (matIdx == skipCpts_[ii])
-          { 
-            skip = true;
-            continue;
-          }
-        }
-        if (skip) { continue; }
         for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
         {
           for (int colIdx = 0; colIdx < numCols; colIdx++)
@@ -269,16 +252,6 @@ namespace monsta
           }
         }
         gradMat = gradMat - correctionCoeff_*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
-        bool skip = false;
-        for (int ii = 0; ii < skipCpts_.size(); ii++)
-        {
-          if (matIdx == skipCpts_[ii])
-          { 
-            skip = true;
-            continue;
-          }
-        }
-        if (skip) { continue; }
         for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
         {
           for (int colIdx = 0; colIdx < numCols; colIdx++)
