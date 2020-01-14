@@ -25,6 +25,7 @@ int main(int argc, char **argv)
   int fluxQuanta = 0;
   std::string inputPath;
   std::string outputPath;
+  int extraSteps = 1000;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -62,6 +63,9 @@ int main(int argc, char **argv)
         break;
       case 'b':
         fluxQuanta = atoi(argv[++i]);
+        break; 
+      case 'e':
+        extraSteps = atoi(argv[++i]);
         break;
     }
   }
@@ -83,7 +87,6 @@ int main(int argc, char **argv)
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
   monsta::ElectroweakTheory theory(gaugeCoupling, mixingAngle, vev, selfCoupling, {0,0,0});
-  // monsta::GeorgiGlashowSu2Theory ggTheory(gaugeCoupling, vev, selfCoupling);
 
   monsta::setVacuumField(field, theory);
   double tol = 1e-6;
@@ -133,19 +136,61 @@ int main(int argc, char **argv)
   monsta::addConstantMagneticField(field, theory, fluxQuanta, 2);
   theory.applyBoundaryConditions(field);
 
-  // monsta::TheoryChecker checker(tol);
-  // checker.checkGradients(theory, field);
 
   double E = theory.computeEnergy(field);
   COUT << E << endl;
 
-  monsta::GradDescentSolver minimiser(tol, maxNumSteps, initialStep, maxStepSize, 100, true);
-  minimiser.solve(theory, field);
+  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, 100, true);
+  solver.solve(theory, field);
+
+  solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
+  solver.solve(theory, field);
+
+  LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
+
+  for (site.first(); site.test(); site.next())
+  {
+    for (int ii = 0; ii < 4; ii++)
+    {
+      monsta::Matrix gradMat = theory.getLocalGradient(field, site, ii);
+      monsta::Matrix fieldMat(field, site, ii);
+      if (ii < 3)
+      {
+        gradMat = gradMat - 0.5*real(monsta::trace(gradMat*conjugateTranspose(fieldMat)))*fieldMat;
+      }
+      else
+      {
+        for (int jj = 1; jj < 4; jj++)
+        {
+          gradMat(jj) = gradMat(jj) - real(gradMat(jj)*conj(fieldMat(jj)))*fieldMat(jj);
+        }
+      }
+      referenceField(site, ii, 0, 0) = gradMat(0, 0);
+      referenceField(site, ii, 0, 1) = gradMat(0, 1);
+      referenceField(site, ii, 1, 0) = gradMat(1, 0);
+      referenceField(site, ii, 1, 1) = gradMat(1, 1);
+    }
+  }
+
+  double norm = monsta::innerProduct(referenceField, referenceField);
+
+  for (site.first(); site.test(); site.next())
+  {
+    for (int ii = 0; ii < referenceField.components(); ii++)
+    {
+      referenceField(site, ii) = referenceField(site, ii)/ sqrt(norm);
+    }
+  }
+
+
+  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 100000, initialStep, maxStepSize, 1.2, 0.5, 100, true);
+  chigusaSolver.solve(theory, field, referenceField);
 
   monsta::writeCoords(field, outputPath + "/coords");
   monsta::writeEnergyDensity(field, outputPath + "/energyData", theory);
   monsta::writeHiggsField(field, outputPath + "/higgsData", theory);
   monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
   monsta::writeRawField(field, outputPath + "/rawData");
+  monsta::writeRawField(referenceField, outputPath + "/referenceRawData");
 
 }
