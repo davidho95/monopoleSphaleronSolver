@@ -123,7 +123,7 @@ int main(int argc, char **argv)
   double pi = 4*atan(1);
   for (int ii = 0; ii < numIncrements; ii++)
   {
-    double bVal = (endB - (endB - startB)*double(ii)/(numIncrements - 1));
+    double bVal = (startB + (endB - startB)*double(ii)/(numIncrements - 1));
     vevs.push_back(sqrt(16*pi*fluxQuanta / bVal) / (gaugeCoupling * sz));
   }
 
