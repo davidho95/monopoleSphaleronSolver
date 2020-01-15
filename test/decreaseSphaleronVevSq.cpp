@@ -136,6 +136,7 @@ int main(int argc, char **argv)
 
     monsta::scaleVev(field, theory);
     minimiser.solve(theory, field);
+    minimiser.solve(theory, field);
 
     minimiser = monsta::GradDescentSolver(0, 5000/vev, initialStep, maxStepSize*vev, 5000/vev);
     minimiser.solve(theory, field);
@@ -176,8 +177,8 @@ int main(int argc, char **argv)
       }
     }
 
-    monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize*vev, correctionCoeff, abortGrad);
-    bool solved = chigusaSolver.solve(theory, field, referenceField);
+    monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize*vev, correctionCoeff, abortGrad, 100);
+    // bool solved = chigusaSolver.solve(theory, field, referenceField);
 
     double E = theory.computeEnergy(field);
     if (parallel.rank() == 1)

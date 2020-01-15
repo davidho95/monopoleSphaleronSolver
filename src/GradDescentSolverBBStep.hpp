@@ -61,7 +61,24 @@ namespace monsta
     relEnergyChange = (energy - energyOld);
     int numIters = 1;
 
-    double maxGradOld = 1e6;
+    double maxGradOld = 0;
+    if (minimiseGrad_)
+    {
+      while (maxGradOld < maxGrad_)
+      {
+        numIters++;
+        maxGradOld = maxGrad_;
+        iterate(field, theory, oldGrads);
+        energyOld = energy;
+        energy = theory.computeEnergy(field);
+        relEnergyChange = (energy - energyOld);
+        if (isVerbose_)
+        {
+          COUT << energy << std::endl;
+          COUT << maxGrad_ << std::endl;
+        }
+      }
+    }
     while (numIters < minSteps_)
     {
       maxGradOld = maxGrad_;
