@@ -7,7 +7,7 @@
 #include "../src/GradDescentSolverChigusaElectroweak.hpp"
 #include "../src/Su2Tools.hpp"
 #include "../src/MonopoleFileTools.hpp"
-#include "../src/MonopoleFieldTools.hpp"
+#include "../src/ElectroweakFieldTools.hpp"
 #include <iostream>
 #include <fstream>
 #include <ctime>
@@ -30,12 +30,13 @@ int main(int argc, char **argv)
   double gaugeCoupling = 1;
   double selfCoupling = 1;
   int sep = sz/2;
-  double startVev;
-  double endVev;
+  double startB;
+  double endB;
   double numIncrements;
   double zAspect = 1;
   double correctionCoeff = 1.5;
   double tanSqMixingAngle = 0.268;
+  int fluxQuanta = 18;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -71,11 +72,14 @@ int main(int argc, char **argv)
       case 'b':
         correctionCoeff = atof(argv[++i]);
         break;
+      case 'B':
+        fluxQuanta = atoi(argv[++i]);
+        break;
       case 'S':
-        startVev = atof(argv[++i]);
+        startB = atof(argv[++i]);
         break;
       case 'E':
-        endVev = atof(argv[++i]);
+        endB = atof(argv[++i]);
         break;
       case 'I':
         numIncrements = atof(argv[++i]);
@@ -116,22 +120,25 @@ int main(int argc, char **argv)
   theory.applyBoundaryConditions(field);
 
   std::vector<double> vevs;
+  double pi = 4*atan(1);
   for (int ii = 0; ii < numIncrements; ii++)
   {
-    vevs.push_back(endVev - (endVev - startVev)*double(ii)/(numIncrements - 1));
+    double bVal = (startB + (endB - startB)*double(ii)/(numIncrements - 1));
+    vevs.push_back(sqrt(16*pi*fluxQuanta / bVal) / (gaugeCoupling * sz));
   }
 
   for (int ii = 0; ii < numIncrements; ii++)
   {
     vev = vevs[ii];
-    monsta::GradDescentSolver minimiser(0, maxNumSteps, initialStep, maxStepSize*vev, 100/(gaugeCoupling*pow(vev,2)), true);
+    monsta::GradDescentSolver minimiser(0, maxNumSteps, initialStep, maxStepSize*vev, 100, true);
 
     monsta::ElectroweakTheory theory(gaugeCoupling, tanSqMixingAngle, vev, selfCoupling, {0, 0, 0}, false);
 
     monsta::scaleVev(field, theory);
     minimiser.solve(theory, field);
+    minimiser.solve(theory, field);
 
-    minimiser = monsta::GradDescentSolver(0, 500/vev, initialStep, maxStepSize*vev, 5000/vev, true);
+    minimiser = monsta::GradDescentSolver(0, 5000/vev, initialStep, maxStepSize*vev, 5000/vev);
     minimiser.solve(theory, field);
 
     for (site.first(); site.test(); site.next())
@@ -170,8 +177,8 @@ int main(int argc, char **argv)
       }
     }
 
-    monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize*vev, correctionCoeff, abortGrad);
-    bool solved = chigusaSolver.solve(theory, field, referenceField);
+    monsta::GradDescentSolverChigusa chigusaSolver(tol, maxNumSteps, initialStep, maxStepSize*vev, correctionCoeff, abortGrad, 100);
+    // bool solved = chigusaSolver.solve(theory, field, referenceField);
 
     double E = theory.computeEnergy(field);
     if (parallel.rank() == 1)

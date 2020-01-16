@@ -1,14 +1,12 @@
 #include "LATfield2.hpp"
 #include <complex>
-// #include "../src/GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "../src/ElectroweakTheory.hpp"
-#include "../src/GeorgiGlashowSu2EomTheory.hpp"
+#include "../src/GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "../src/Matrix.hpp"
 #include "../src/GradDescentSolverBBStep.hpp"
 #include "../src/Su2Tools.hpp"
 #include "../src/MonopoleFileTools.hpp"
-#include "../src/MonopoleFieldTools.hpp"
-#include "../src/TheoryChecker.hpp"
+#include "../src/ElectroweakFieldTools.hpp"
 #include <iostream>
 #include <fstream>
 #include <bits/stdc++.h> 
@@ -27,9 +25,9 @@ int main(int argc, char **argv)
   double vev = 1;
   double gaugeCoupling = 1;
   double selfCoupling = 1;
+  double tanSqMixingAngle = 0.286;
   double fluxQuanta = 1;
-  int maxNumSteps = 200000;
-  int outputIncrement = 1000;
+  double zAspect = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -47,9 +45,6 @@ int main(int argc, char **argv)
       case 'm':
         m = atoi(argv[++i]);
         break;
-      case 'i':
-        inputPath = argv[++i];
-        break;
       case 'v':
         vev = atof(argv[++i]);
         break;
@@ -62,115 +57,81 @@ int main(int argc, char **argv)
       case 'b':
         fluxQuanta = atoi(argv[++i]);
         break;
-      case 'N':
-        maxNumSteps = atoi(argv[++i]);
+      case 'i':
+        inputPath = argv[++i];
         break;
-      case 'D':
-        outputIncrement = atoi(argv[++i]);
+      case 'z':
+        zAspect = atof(argv[++i]);
         break;
+      case 'q':
+        tanSqMixingAngle = atof(argv[++i]);
+        break;
+
     }
   }
 
   parallel.initialize(n,m);
 
   int dim = 3;
-  int xSz = 1;
+  int xSz = sz;
   int ySz = sz;
-  int zSz = sz;
+  int zSz = round(zAspect*sz);
   int latSize[dim] = {xSz, ySz, zSz};
-  int haloSize = 2;
+  int haloSize = 1;
   int numMatrices = 4;
   int numRows = 2;
   int numCols = 2;
 
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
-  monsta::ElectroweakTheory theory(gaugeCoupling, 0.5, vev, selfCoupling);
+  monsta::ElectroweakTheory theory(gaugeCoupling, tanSqMixingAngle, vev, selfCoupling);
 
   LATfield2::Site site(lattice);
 
   double initialStep = 0.01;
   double maxStepSize = 0.01;
-  double tol = 1e-10;
-  int minNumSteps = 0;
+  double tol = 1e-6;
+  int minNumSteps = 1000;
+  int maxNumSteps = 200000;
 
   monsta::setVacuumField(field, theory);
-  // for (site.first(); site.test(); site.next())
-  // {
-  //   monsta::Matrix higgsMat = monsta::vecToSu2LieAlg({0, 0, vev/sqrt(2)});//{ 0.01*(rand() % 100), 0.01*(rand() % 100), 0.01*(rand() % 100)});
-  //   field(site, 3, 0, 0) = higgsMat(0, 0);
-  //   field(site, 3, 0, 1) = higgsMat(0, 1);
-  //   field(site, 3, 1, 0) = higgsMat(1, 0);
-  //   field(site, 3, 1, 1) = higgsMat(1, 1);
-  // }
   theory.applyBoundaryConditions(field);
 
-  for (site.first(); site.test(); site.next())
+  if (inputPath != "")
   {
-    int yCoord = site.coord(1) - ySz / 2;
-    int zCoord = site.coord(2) - zSz / 2;
-
-    double r = sqrt(pow(yCoord,2) + pow(zCoord,2));
-
-    // std::vector<double> su2Vec = {0.001*exp(-pow(r,2) / 10), -0001*exp(-pow(r,2) / 10), 0};
-    // std::vector<double> su2Vec = {0.001*(1e-5*double(rand() % 628318 - 314159)), 0.001*(1e-5*double(rand() % 628318 - 314159)), 0.001*(1e-5*double(rand() % 628318 - 314159))};
-    for (int ii = 0; ii < 3; ii++)
+    monsta::readRawField(field, inputPath + "/rawData");
+    theory.applyBoundaryConditions(field);
+  }
+  else
+  {
+    for (site.first(); site.test(); site.next())
     {
-      // double randNum = 1e-6*(rand() % 2000 - 1000);
-      std::vector<double> su2Vec = {1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000)};
-      monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
-      // su2Mat.print();
-      field(site, ii, 0, 0) = su2Mat(0, 0);
-      field(site, ii, 0, 1) = su2Mat(0, 1);
-      field(site, ii, 1, 0) = su2Mat(1, 0);
-      field(site, ii, 1, 1) = su2Mat(1, 1);
+      int yCoord = site.coord(1) - ySz / 2;
+      int zCoord = site.coord(2) - zSz / 2;
 
-      theory.postProcess(field, site, ii);
+      double r = sqrt(pow(yCoord,2) + pow(zCoord,2));
+
+      for (int ii = 0; ii < 3; ii++)
+      {
+        std::vector<double> su2Vec = {1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000)};
+        monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
+        field(site, ii, 0, 0) = su2Mat(0, 0);
+        field(site, ii, 0, 1) = su2Mat(0, 1);
+        field(site, ii, 1, 0) = su2Mat(1, 0);
+        field(site, ii, 1, 1) = su2Mat(1, 1);
+        theory.postProcess(field, site, ii);
+      }
     }
-
   }
 
-  monsta::addConstantMagneticField(field, theory, -fluxQuanta);
+  monsta::addConstantMagneticField(field, theory, fluxQuanta, 2);
+  theory.applyBoundaryConditions(field);
 
-  // monsta::GeorgiGlashowSu2EomTheory eomTheory(gaugeCoupling, vev, selfCoupling);
-  // double gradSq = eomTheory.computeEnergy(field);
-  // COUT << gradSq << endl;
-
-  double E = theory.computeEnergy(field);
-  COUT << E << endl;
-
-  int numIters = 0;
-
-
-  std::string currentOutputPath = outputPath + "/vortexData" + std::to_string(numIters / 500);
-
-  mkdir(currentOutputPath.c_str(), 0777);
-
-  monsta::writeRawField(field, currentOutputPath + "/rawData");
-  monsta::writeCoords(field, currentOutputPath + "/coords");
-  monsta::writeHiggsFieldMagnitude(field, currentOutputPath + "/higgsData");
-  monsta::writeMagneticField(field, currentOutputPath + "/magneticFieldData", theory);
-  monsta::writeEnergyDensity(field, currentOutputPath + "/energyData", theory);
-  monsta::writeUnitaryGaugeField(field, currentOutputPath + "/gaugeData");
-  monsta::writeUnitaryWField(field, currentOutputPath + "/wData");
-  while (numIters < maxNumSteps)
-  {
-    numIters += outputIncrement;
-    monsta::GradDescentSolver solver(tol, outputIncrement, initialStep, maxStepSize, outputIncrement);
-    solver.solve(theory, field);
-
-    currentOutputPath = outputPath + "/vortexData" + std::to_string(numIters / outputIncrement);
-
-    mkdir(currentOutputPath.c_str(), 0777);
-
-    monsta::writeRawField(field, currentOutputPath + "/rawData");
-    monsta::writeCoords(field, currentOutputPath + "/coords");
-    monsta::writeHiggsFieldMagnitude(field, currentOutputPath + "/higgsData");
-    monsta::writeMagneticField(field, currentOutputPath + "/magneticFieldData", theory);
-    monsta::writeEnergyDensity(field, currentOutputPath + "/energyData", theory);
-    monsta::writeUnitaryGaugeField(field, currentOutputPath + "/gaugeData");
-    monsta::writeUnitaryWField(field, currentOutputPath + "/wData");
-  } 
-
-
+  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, minNumSteps);
+  solver.solve(theory, field);
+  monsta::writeRawField(field, outputPath + "/rawData");
+  monsta::writeCoords(field, outputPath + "/coords");
+  monsta::writeHiggsFieldMagnitude(field, outputPath + "/higgsData");
+  monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
+  monsta::writeEnergyDensity(field, outputPath + "/energyData", theory);
 }

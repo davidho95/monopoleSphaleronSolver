@@ -23,7 +23,8 @@ int main(int argc, char **argv)
   double mixingAngle = 2*atan(1) / 3;
   double selfCoupling = 1;
   int fluxQuanta = 0;
-  std::string inputPath;
+  std::string ambjornOlesenInputPath;
+  std::string sphaleronInputPath;
   std::string outputPath;
   int extraSteps = 1000;
 
@@ -31,11 +32,14 @@ int main(int argc, char **argv)
     if ( argv[i][0] != '-' )
       continue;
     switch(argv[i][1]) {
-        case 'p':
+      case 'p':
         outputPath = argv[++i];
         break;
-        case 'i':
-        inputPath = argv[++i];
+      case 'i':
+        ambjornOlesenInputPath = argv[++i];
+        break;
+      case 'j':
+        sphaleronInputPath = argv[++i];
         break;
       case 's':
         sz =  atoi(argv[++i]);
@@ -85,11 +89,12 @@ int main(int argc, char **argv)
 
 
   LATfield2::Lattice lattice(dim, latSize, haloSize);
-  LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
+  LATfield2::Field<complex<double> > ambjornOlesenField(lattice, numMatrices, numRows, numCols, 0);
+  LATfield2::Field<complex<double> > sphaleronField(lattice, numMatrices, numRows, numCols, 0);
+  LATfield2::Field<complex<double> > combinedField(lattice, numMatrices, numRows, numCols, 0);
   monsta::ElectroweakTheory theory(gaugeCoupling, mixingAngle, vev, selfCoupling, {0,0,0});
   // monsta::GeorgiGlashowSu2Theory ggTheory(gaugeCoupling, vev, selfCoupling);
 
-  monsta::setVacuumField(field, theory);
   double tol = 1e-6;
   double initialStep = 0.001;
   double maxStepSize = 0.005;
@@ -97,57 +102,49 @@ int main(int argc, char **argv)
 
   LATfield2::Site site(lattice);
 
-  if (inputPath != "")
+  monsta::readRawField(ambjornOlesenField, ambjornOlesenInputPath + "/rawData");
+  theory.applyBoundaryConditions(ambjornOlesenField);
+  monsta::readRawField(sphaleronField, sphaleronInputPath + "/rawData");
+  theory.applyBoundaryConditions(sphaleronField);
+
+  monsta::addConstantMagneticField(sphaleronField, theory, fluxQuanta, 2);
+
+  for (site.first(); site.test(); site.next())
   {
-    monsta::readRawField(field, inputPath + "/rawData");
-    theory.applyBoundaryConditions(field);
-  }
-  else
-  {
-    for(site.first(); site.test(); site.next())
+    std::vector<double> coords(3);
+    coords[0] = site.coord(0) - xSz/2 + 0.5;
+    coords[1] = site.coord(1) - ySz/2 + 0.5;
+    coords[2] = site.coord(2) - zSz/2 + 0.5;
+
+    for (int ii = 0; ii < numMatrices; ii++)
     {
-      std::vector<double> coords(3);
-      coords[0] = site.coord(0) - xSz/2 + 0.5;
-      coords[1] = site.coord(1) - ySz/2 + 0.5;
-      coords[2] = site.coord(2) - zSz/2 + 0.5;
-      double r = sqrt(pow(coords[0], 2) + pow(coords[1], 2) + pow(coords[2], 2) + 0.01);
-      std::vector<double> gaugeFns(3);
-      gaugeFns[0] = 1/cosh(vev*gaugeCoupling*r/3);
-      gaugeFns[1] = 1/cosh(vev*gaugeCoupling*r/3);
-      gaugeFns[2] = 1/cosh(vev*gaugeCoupling*r/3);
-      double higgsFn = tanh(vev*gaugeCoupling*r/3);
-      for (int ii = 0; ii < 3; ii++)
+      if (abs(coords[0]) < 6 && abs(coords[1]) < 6)
       {
-        std::vector<double> su2Vec(3);
-        int dir1 = (ii + 1) % 3;
-        int dir2 = (ii + 2) % 3;
-        su2Vec[dir1] = (1/pow(r, 2) * coords[dir2])*gaugeFns[ii];
-        su2Vec[dir2] = (-1/pow(r, 2) * coords[dir1])*gaugeFns[ii];
-        monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
-
-        field(site, ii, 0, 0) = su2Mat(0, 0);
-        field(site, ii, 0, 1) = su2Mat(0, 1);
-        field(site, ii, 1, 0) = su2Mat(1, 0);
-        field(site, ii, 1, 1) = su2Mat(1, 1);
+        combinedField(site, ii, 0, 0) = sphaleronField(site, ii, 0, 0);
+        combinedField(site, ii, 0, 1) = sphaleronField(site, ii, 0, 1);
+        combinedField(site, ii, 1, 0) = sphaleronField(site, ii, 1, 0);
+        combinedField(site, ii, 1, 1) = sphaleronField(site, ii, 1, 1);
       }
-      field(site, 3, 0, 0) = vev / sqrt(2) * higgsFn;
+      else
+      {
+        combinedField(site, ii, 0, 0) = ambjornOlesenField(site, ii, 0, 0);
+        combinedField(site, ii, 0, 1) = ambjornOlesenField(site, ii, 0, 1);
+        combinedField(site, ii, 1, 0) = ambjornOlesenField(site, ii, 1, 0);
+        combinedField(site, ii, 1, 1) = ambjornOlesenField(site, ii, 1, 1);
+      }
     }
-    theory.applyBoundaryConditions(field);
   }
-  monsta::addConstantMagneticField(field, theory, fluxQuanta, 2);
-  theory.applyBoundaryConditions(field);
+  theory.applyBoundaryConditions(combinedField);
 
-  // monsta::TheoryChecker checker(tol);
-  // checker.checkGradients(theory, field);
 
-  double E = theory.computeEnergy(field);
+  double E = theory.computeEnergy(combinedField);
   COUT << E << endl;
 
   monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, 100, true);
-  solver.solve(theory, field);
+  solver.solve(theory, combinedField);
 
   solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
-  solver.solve(theory, field);
+  solver.solve(theory, combinedField);
 
   LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
 
@@ -155,8 +152,8 @@ int main(int argc, char **argv)
   {
     for (int ii = 0; ii < 4; ii++)
     {
-      monsta::Matrix gradMat = theory.getLocalGradient(field, site, ii);
-      monsta::Matrix fieldMat(field, site, ii);
+      monsta::Matrix gradMat = theory.getLocalGradient(combinedField, site, ii);
+      monsta::Matrix fieldMat(combinedField, site, ii);
       if (ii < 3)
       {
         gradMat = gradMat - 0.5*real(monsta::trace(gradMat*conjugateTranspose(fieldMat)))*fieldMat;
@@ -190,13 +187,13 @@ int main(int argc, char **argv)
 
 
   monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 333000, initialStep, maxStepSize, 1.2, 0.5);
-  chigusaSolver.solve(theory, field, referenceField);
+  chigusaSolver.solve(theory, combinedField, referenceField);
 
-  monsta::writeCoords(field, outputPath + "/coords");
-  monsta::writeEnergyDensity(field, outputPath + "/energyData", theory);
-  monsta::writeHiggsField(field, outputPath + "/higgsData", theory);
-  monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
-  monsta::writeRawField(field, outputPath + "/rawData");
+  monsta::writeCoords(combinedField, outputPath + "/coords");
+  monsta::writeEnergyDensity(combinedField, outputPath + "/energyData", theory);
+  monsta::writeHiggsField(combinedField, outputPath + "/higgsData", theory);
+  monsta::writeMagneticField(combinedField, outputPath + "/magneticFieldData", theory);
+  monsta::writeRawField(combinedField, outputPath + "/rawData");
   monsta::writeRawField(referenceField, outputPath + "/referenceRawData");
 
 }

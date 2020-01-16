@@ -87,7 +87,6 @@ int main(int argc, char **argv)
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
   monsta::ElectroweakTheory theory(gaugeCoupling, mixingAngle, vev, selfCoupling, {0,0,0});
-  // monsta::GeorgiGlashowSu2Theory ggTheory(gaugeCoupling, vev, selfCoupling);
 
   monsta::setVacuumField(field, theory);
   double tol = 1e-6;
@@ -137,8 +136,6 @@ int main(int argc, char **argv)
   monsta::addConstantMagneticField(field, theory, fluxQuanta, 2);
   theory.applyBoundaryConditions(field);
 
-  // monsta::TheoryChecker checker(tol);
-  // checker.checkGradients(theory, field);
 
   double E = theory.computeEnergy(field);
   COUT << E << endl;
@@ -167,9 +164,7 @@ int main(int argc, char **argv)
         {
           gradMat(jj) = gradMat(jj) - real(gradMat(jj)*conj(fieldMat(jj)))*fieldMat(jj);
         }
-        // cout << gradMat(0,0) << endl;
       }
-      // cout << real(trace(gradMat*gradMat)) << endl;
       referenceField(site, ii, 0, 0) = gradMat(0, 0);
       referenceField(site, ii, 0, 1) = gradMat(0, 1);
       referenceField(site, ii, 1, 0) = gradMat(1, 0);
@@ -178,7 +173,6 @@ int main(int argc, char **argv)
   }
 
   double norm = monsta::innerProduct(referenceField, referenceField);
-  // cout << norm << endl;
 
   for (site.first(); site.test(); site.next())
   {
@@ -189,7 +183,7 @@ int main(int argc, char **argv)
   }
 
 
-  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 333000, initialStep, maxStepSize, 1.2, 0.5);
+  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 100000, initialStep, maxStepSize, 1.2, 0.5, 100, true);
   chigusaSolver.solve(theory, field, referenceField);
 
   monsta::writeCoords(field, outputPath + "/coords");
