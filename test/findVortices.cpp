@@ -90,8 +90,8 @@ int main(int argc, char **argv)
 
   double initialStep = 0.01;
   double maxStepSize = 0.01;
-  double tol = 1e-6;
-  int minNumSteps = 1000;
+  double tol = 5e-5;
+  int minNumSteps = 20000;
   int maxNumSteps = 200000;
 
   monsta::setVacuumField(field, theory);
@@ -113,6 +113,7 @@ int main(int argc, char **argv)
 
       for (int ii = 0; ii < 3; ii++)
       {
+        // srand(site.coord(0)*xSz+site.coord(1));
         std::vector<double> su2Vec = {1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000), 1e-6*(rand() % 2000 - 1000)};
         monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
         field(site, ii, 0, 0) = su2Mat(0, 0);
