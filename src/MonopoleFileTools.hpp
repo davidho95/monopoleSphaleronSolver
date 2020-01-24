@@ -88,6 +88,44 @@ namespace monsta
     parallel.barrier();
   }
 
+  void readFileWithCoords(LATfield2::Field< std::complex<double> > &field, std::string coordFile, std::string rawDataFile)
+  {
+    ifstream coordStream;
+    ifstream rawDataStream;
+    coordStream.open(coordFile);
+    rawDataStream.open(rawDataFile);
+
+    LATfield2::Site site(field.lattice());
+    std::string coordLine;
+    std::string rawDataLine;
+
+    while(std::getline(coordStream, coordLine))
+    {
+      int coord;
+      std::vector<int> coords;
+      std::istringstream coordLineStream(coordLine);
+      while (coordLineStream >> coord)
+      {
+        coords.push_back(coord);
+      }
+      bool isLocal = site.setCoord(coords[0], coords[1], coords[2]);
+      if (!isLocal) { continue; }
+      for (int cpt = 0; cpt < field.components(); cpt++)
+      {
+        std::getline(rawDataStream, rawDataLine);
+        std::istringstream rawDataLineStream(rawDataLine);
+        std::complex<double> value;
+        rawDataLineStream >> value;
+        field(site, cpt) = value;
+      }
+    }
+
+
+    coordStream.close();
+    rawDataStream.close();
+    parallel.barrier();
+  }
+
   void writeCoords(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
   {
     ofstream fileStream;
