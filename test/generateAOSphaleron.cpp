@@ -87,7 +87,7 @@ int main(int argc, char **argv)
   int dim = 3;
   int xSz = sz;
   int ySz = sz;
-  int zSz = sz;
+  int zSz = round(zAspect*sz);
   int latSize[dim] = {xSz, ySz, zSz};
   int haloSize = 1;
   int numMatrices = 4;
@@ -152,6 +152,7 @@ int main(int argc, char **argv)
 
   monsta::readRawField(sphaleronField, sphaleronInputPath + "/rawData");
   theory.applyBoundaryConditions(sphaleronField);
+  monsta::addConstantMagneticField(sphaleronField, theory, fluxQuanta, 2);
 
   for (site.first(); site.test(); site.next())
   {
