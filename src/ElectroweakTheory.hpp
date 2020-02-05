@@ -22,11 +22,11 @@ namespace monsta {
     double getMagneticField(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
     void postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
     void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
-
-  protected:
-    void applyCPeriodicBoundaryConditions(LATfield2::Field< std::complex<double> > &field, int dir) const;
     monsta::Matrix getSu2Plaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const;
     std::complex<double> getU1Plaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const;
+
+  protected:
+    // void applyCPeriodicBoundaryConditions(LATfield2::Field< std::complex<double> > &field, int dir) const;
     monsta::Matrix getSu2Staple(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp) const;
     std::complex<double> getU1Staple(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2, bool isUp) const;
 
@@ -240,81 +240,81 @@ namespace monsta {
   void ElectroweakTheory::applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const
   {
     field.updateHalo();
-    for (int dir = 0; dir < 3; dir++)
-    {
-      applyCPeriodicBoundaryConditions(field, dir);
-    }
+    // for (int dir = 0; dir < 3; dir++)
+    // {
+    //   applyCPeriodicBoundaryConditions(field, dir);
+    // }
   }
 
-  void ElectroweakTheory::applyCPeriodicBoundaryConditions(LATfield2::Field< std::complex<double> > &field, int dir) const
-  {
-    LATfield2::Site site(field.lattice());
+  // void ElectroweakTheory::applyCPeriodicBoundaryConditions(LATfield2::Field< std::complex<double> > &field, int dir) const
+  // {
+  //   LATfield2::Site site(field.lattice());
 
-    for (site.haloFirst(); site.haloTest(); site.haloNext())
-    {
-      int coord = site.coord(dir);
-      int maxCoord = field.lattice().size(dir) - 1;
-      if (coord < 0 || coord > maxCoord)
-      {
-        for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++) // Apply C-periodic boundary conditions
-        {
-          int pauliMatNum = boundaryConditions_[dir];
-          Matrix boundaryMat(field, site, matIdx);
-          if (matIdx < 3)
-          {
-            switch(pauliMatNum)
-            {
-              case 0:
-                break;
-              case 1:
-                boundaryMat = pauli1*boundaryMat*pauli1;
-                break;
-              case 2:
-                boundaryMat = pauli2*boundaryMat*pauli2;
-                break;
-              case 3:
-                boundaryMat = pauli3*boundaryMat*pauli3;
-                break;
-            }
-            if (tHooftLine_ && dir == 2 && site.coord(1) == 0)
-            {
-              if (matIdx == 1)
-              {
-                boundaryMat = -1.0*boundaryMat;
-              }
-            }
-          }
-          else
-          {
-            for (int ii = 0; ii < 4; ii ++)
-            {
-              if (ii < 3)
-              {
-                if (tHooftLine_ && dir == 2 && site.coord(1) == 0)
-                {
-                  if (ii == 1)
-                  {
-                    boundaryMat((ii + 1) % 2, (ii + 1) / 2) = -boundaryMat((ii + 1) % 2, (ii + 1) / 2);
-                  }
-                }
-                if (pauliMatNum != 0)
-                {
-                  boundaryMat((ii + 1) % 2, (ii + 1) / 2) = conj(boundaryMat((ii + 1) % 2, (ii + 1) / 2));
-                }
-              } else {
-                continue;
-              }
-            }
-          }
+  //   for (site.haloFirst(); site.haloTest(); site.haloNext())
+  //   {
+  //     int coord = site.coord(dir);
+  //     int maxCoord = field.lattice().size(dir) - 1;
+  //     if (coord < 0 || coord > maxCoord)
+  //     {
+  //       for (int matIdx = 0; matIdx < numFieldMatrices_; matIdx++) // Apply C-periodic boundary conditions
+  //       {
+  //         int pauliMatNum = boundaryConditions_[dir];
+  //         Matrix boundaryMat(field, site, matIdx);
+  //         if (matIdx < 3)
+  //         {
+  //           switch(pauliMatNum)
+  //           {
+  //             case 0:
+  //               break;
+  //             case 1:
+  //               boundaryMat = pauli1*boundaryMat*pauli1;
+  //               break;
+  //             case 2:
+  //               boundaryMat = pauli2*boundaryMat*pauli2;
+  //               break;
+  //             case 3:
+  //               boundaryMat = pauli3*boundaryMat*pauli3;
+  //               break;
+  //           }
+  //           if (tHooftLine_ && dir == 2 && site.coord(1) == 0)
+  //           {
+  //             if (matIdx == 1)
+  //             {
+  //               boundaryMat = -1.0*boundaryMat;
+  //             }
+  //           }
+  //         }
+  //         else
+  //         {
+  //           for (int ii = 0; ii < 4; ii ++)
+  //           {
+  //             if (ii < 3)
+  //             {
+  //               if (tHooftLine_ && dir == 2 && site.coord(1) == 0)
+  //               {
+  //                 if (ii == 1)
+  //                 {
+  //                   boundaryMat((ii + 1) % 2, (ii + 1) / 2) = -boundaryMat((ii + 1) % 2, (ii + 1) / 2);
+  //                 }
+  //               }
+  //               if (pauliMatNum != 0)
+  //               {
+  //                 boundaryMat((ii + 1) % 2, (ii + 1) / 2) = conj(boundaryMat((ii + 1) % 2, (ii + 1) / 2));
+  //               }
+  //             } else {
+  //               continue;
+  //             }
+  //           }
+  //         }
 
-          field(site, matIdx, 0, 0) = boundaryMat(0, 0);
-          field(site, matIdx, 0, 1) = boundaryMat(0, 1);
-          field(site, matIdx, 1, 0) = boundaryMat(1, 0);
-          field(site, matIdx, 1, 1) = boundaryMat(1, 1);
-        }
-      }
-    }
-  }
+  //         field(site, matIdx, 0, 0) = boundaryMat(0, 0);
+  //         field(site, matIdx, 0, 1) = boundaryMat(0, 1);
+  //         field(site, matIdx, 1, 0) = boundaryMat(1, 0);
+  //         field(site, matIdx, 1, 1) = boundaryMat(1, 1);
+  //       }
+  //     }
+  //   }
+  // }
 
   monsta::Matrix ElectroweakTheory::getSu2Plaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const
   {
