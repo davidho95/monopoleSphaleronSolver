@@ -61,7 +61,7 @@ namespace monsta
       for (int ii = 0; ii < 3; ii++)
       {
         double theta = 1e-5*double(rand() % 628318 - 314159);
-        field(site, 3, ii % 2, ii / 2) = cos(theta) + 1i*sin(theta);
+        field(site, 3, (ii + 1) % 2, (ii + 1) / 2) = cos(theta) + 1i*sin(theta);
       }
       field(site, 3, 1, 1) = 0.01*double(rand() % 100);
     }
@@ -161,6 +161,136 @@ namespace monsta
       field(site, 3, 0, 0) *= higgsRatio;
     }
     theory.applyBoundaryConditions(field);
+  }
+
+  void scaleVev(LATfield2::Field< std::complex<double> > &field, monsta::ElectroweakTheory &theory, double oldVev)
+  {
+    LATfield2::Site site(field.lattice());
+    
+    double higgsRatio = theory.getVev() / oldVev;
+
+    for (site.first(); site.test(); site.next())
+    {
+      field(site, 3, 0, 0) *= higgsRatio;
+    }
+    theory.applyBoundaryConditions(field);
+  }
+
+  void linearSuperpose(LATfield2::Field< std::complex<double> > &field1,
+  LATfield2::Field< std::complex<double> > &field2,
+  LATfield2::Field< std::complex<double> > &outputField,
+  monsta::ElectroweakTheory &theory)
+  {
+    LATfield2::Site site(outputField.lattice());
+
+    for (site.first(); site.test(); site.next())
+    {
+      for (int ii = 0; ii < 3; ii++)
+      {
+        std::vector<double> su2Vec1 = su2ToVec(Matrix(field1, site, ii));
+        std::vector<double> su2Vec2 = su2ToVec(Matrix(field2, site, ii));
+        std::vector<double> outputVec(3);
+
+        for (int jj = 0; jj < 3; jj++)
+        {
+          outputVec[jj] = su2Vec1[jj] + su2Vec2[jj];
+        }
+
+        Matrix outputMat = vecToSu2(outputVec);
+
+        outputField(site, ii, 0, 0) = outputMat(0, 0);
+        outputField(site, ii, 0, 1) = outputMat(0, 1);
+        outputField(site, ii, 1, 0) = outputMat(1, 0);
+        outputField(site, ii, 1, 1) = outputMat(1, 1);
+      }
+      for (int ii = 0; ii < 3; ii++)
+      {
+        double u1Angle1 = arg(theory.getU1Link(field1, site, ii));
+        double u1Angle2 = arg(theory.getU1Link(field2, site, ii));
+
+        double outputAngle = u1Angle1 + u1Angle2;
+
+        std::complex<double> outputU1 = cos(outputAngle) + 1i*sin(outputAngle);
+        outputField(site, 3, (ii + 1) % 2, (ii + 1) / 2) = outputU1;
+      }
+
+      if (abs(field1(site, 3, 0, 0)) < abs(field2(site, 3, 0, 0)))
+      {
+        outputField(site, 3, 0, 0) = field1(site, 3, 0, 0);
+      }
+      else
+      {
+        outputField(site, 3, 0, 0) = field2(site, 3, 0, 0);
+      }
+    }
+
+    theory.applyBoundaryConditions(outputField);
+  }
+
+  double getCSNum(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, monsta::ElectroweakTheory &theory)
+  {
+    double csNum = 0;
+
+    // Compute Tr[W \wedge dW]
+    for (int spatialIdx1 = 0; spatialIdx1 < 3; spatialIdx1++)
+    {
+      for (int spatialIdx2 = 0; spatialIdx2 < 3; spatialIdx2++)
+      {
+        for (int spatialIdx3 = 0; spatialIdx3 < 3; spatialIdx3++)
+        {
+          if (epsilonTensor(spatialIdx1, spatialIdx2, spatialIdx3) == 0) { continue; }
+          Matrix su2Plaquette = theory.getSu2Plaquette(field, site, spatialIdx1, spatialIdx2);
+          std::complex<double> determinant = su2Plaquette(0,0)*su2Plaquette(1, 1) - su2Plaquette(0, 1)*su2Plaquette(1, 0);
+          for (int rowIdx = 0; rowIdx < 2; rowIdx++)
+          {
+            for (int colIdx = 0; colIdx < 2; colIdx++)
+            {
+              su2Plaquette(rowIdx, colIdx) = su2Plaquette(rowIdx, colIdx) / sqrt(determinant);
+            }
+            su2Plaquette(0, 0) = conj(su2Plaquette(1, 1));
+            su2Plaquette(1, 0) = -1.0*conj(su2Plaquette(0, 1));
+          }
+          std::vector<double> fieldStrengthVec = su2ToVec(su2Plaquette);
+          std::vector<double> gaugeFieldVec = su2ToVec(theory.getSu2Link(field, site, spatialIdx3));
+          // theory.getSu2Plaquette(field, site, spatialIdx1, spatialIdx2).PRINT();
+          // COUT << fieldStrengthVec[0] << fieldStrengthVec[1] << fieldStrengthVec[2] << endl;
+          for (int su2Idx = 0; su2Idx < 3; su2Idx++)
+          {
+            csNum -= epsilonTensor(spatialIdx1, spatialIdx2, spatialIdx3)*fieldStrengthVec[su2Idx]*gaugeFieldVec[su2Idx];
+          }
+        }
+      }
+    }
+
+    // cout << csNum << endl;
+
+    // Compute Tr[W \wedge W \wedge W]
+    for (int spatialIdx1 = 0; spatialIdx1 < 3; spatialIdx1++)
+    {
+      for (int spatialIdx2 = 0; spatialIdx2 < 3; spatialIdx2++)
+      {
+        for (int spatialIdx3 = 0; spatialIdx3 < 3; spatialIdx3++)
+        {
+          std::vector< std::vector<double> > gaugeFieldVecs;
+          gaugeFieldVecs.push_back(su2ToVec(theory.getSu2Link(field, site, spatialIdx1)));
+          gaugeFieldVecs.push_back(su2ToVec(theory.getSu2Link(field, site, spatialIdx2)));
+          gaugeFieldVecs.push_back(su2ToVec(theory.getSu2Link(field, site, spatialIdx3)));
+          for (int su2Idx1 = 0; su2Idx1 < 3; su2Idx1++)
+          {
+            for (int su2Idx2 = 0; su2Idx2 < 3; su2Idx2++)
+            {
+              for (int su2Idx3 = 0; su2Idx3 < 3; su2Idx3++)
+              {
+                csNum -= 2.0/3.0 * epsilonTensor(spatialIdx1, spatialIdx2, spatialIdx3)*epsilonTensor(su2Idx1, su2Idx2, su2Idx3)
+                  *gaugeFieldVecs[spatialIdx1][su2Idx1]*gaugeFieldVecs[spatialIdx2][su2Idx2]*gaugeFieldVecs[spatialIdx3][su2Idx3];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return csNum;
   }
 
 }
