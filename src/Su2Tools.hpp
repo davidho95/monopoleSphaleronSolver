@@ -121,6 +121,13 @@ namespace monsta
     return outputVec;
 
   }
+
+  int epsilonTensor(int ii, int jj, int kk)
+  {
+    if ((ii == jj) || (jj == kk) || (kk == ii)) { return 0; }
+    if ((ii + 1) % 3 == jj && (jj + 1) % 3 == kk) { return 1; }
+    else { return -1; } 
+  }
 }
 
 #endif
