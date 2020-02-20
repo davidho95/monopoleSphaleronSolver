@@ -26,6 +26,7 @@ int main(int argc, char **argv)
   std::string inputPath;
   std::string outputPath;
   int extraSteps = 1000;
+  int numInputFiles = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -67,6 +68,9 @@ int main(int argc, char **argv)
       case 'e':
         extraSteps = atoi(argv[++i]);
         break;
+      case 'N':
+        numInputFiles = atoi(argv[++i]);
+        break;
     }
   }
   parallel.initialize(n,m);
@@ -100,11 +104,18 @@ int main(int argc, char **argv)
   monsta::addConstantMagneticField(field, theory, fluxQuanta, 2);
   theory.applyBoundaryConditions(field);
 
-  monsta::readRawField(field, inputPath + "/rawData");
+  if (numInputFiles == 1)
+  {
+    monsta::readFileWithCoords(field, inputPath + "/coords.txt", inputPath + "/rawData.txt");
+  }
+  else
+  {
+    for (int ii = 0; ii < numInputFiles; ii++)
+    {
+      monsta::readFileWithCoords(field, inputPath + "/coords" + to_string(ii) + ".txt", inputPath + "/rawData" + to_string(ii) + ".txt");
+    }
+  }
   theory.applyBoundaryConditions(field);
-
-  // monsta::TheoryChecker checker(tol);
-  // checker.checkGradients(theory, field);
 
   double E = theory.computeEnergy(field);
   COUT << E << endl;
