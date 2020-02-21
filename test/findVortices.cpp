@@ -75,12 +75,14 @@ int main(int argc, char **argv)
   int dim = 3;
   int xSz = sz;
   int ySz = sz;
-  int zSz = round(zAspect*sz);
+  int zSz = 2;
   int latSize[dim] = {xSz, ySz, zSz};
   int haloSize = 1;
   int numMatrices = 4;
   int numRows = 2;
   int numCols = 2;
+
+  // cout << zSz << endl;
 
   LATfield2::Lattice lattice(dim, latSize, haloSize);
   LATfield2::Field<complex<double> > field(lattice, numMatrices, numRows, numCols, 0);
@@ -90,15 +92,20 @@ int main(int argc, char **argv)
 
   double initialStep = 0.01;
   double maxStepSize = 0.01;
-  double tol = 5e-5;
-  int minNumSteps = 20000;
+  double tol = 1e-6;
+  int minNumSteps = 10000;
   int maxNumSteps = 200000;
 
   monsta::setVacuumField(field, theory);
   theory.applyBoundaryConditions(field);
 
+  // theory.applyBoundaryConditions(field);
+  double E = theory.computeEnergy(field);
+  cout << E << endl;
+
   if (inputPath != "")
   {
+    minNumSteps = 1000;
     monsta::readRawField(field, inputPath + "/rawData");
     theory.applyBoundaryConditions(field);
   }
@@ -128,7 +135,9 @@ int main(int argc, char **argv)
   monsta::addConstantMagneticField(field, theory, fluxQuanta, 2);
   theory.applyBoundaryConditions(field);
 
-  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, minNumSteps);
+  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, minNumSteps, true);
+  solver.solve(theory, field);
+  solver = monsta::GradDescentSolver(tol, maxNumSteps, initialStep, maxStepSize, minNumSteps);
   solver.solve(theory, field);
   monsta::writeRawField(field, outputPath + "/rawData");
   monsta::writeCoords(field, outputPath + "/coords");
