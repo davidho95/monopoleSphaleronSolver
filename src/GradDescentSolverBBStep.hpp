@@ -42,6 +42,9 @@ namespace monsta
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), minSteps_(minSteps) {}
     GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps, bool minimiseGrad)
   : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), minSteps_(minSteps), minimiseGrad_(minimiseGrad) {}
+    GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps, bool minimiseGrad, bool constantStep)
+  : tol_(tol), maxIterations_(maxIterations), stepSize_(initialStepSize), maxStepSize_(maxStepSize), minSteps_(minSteps), minimiseGrad_(minimiseGrad),
+    constantStep_(constantStep) {}
 
   void GradDescentSolver::setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize)
   {
