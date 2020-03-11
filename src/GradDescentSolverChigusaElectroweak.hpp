@@ -2,6 +2,7 @@
 #define GRADDESCENTSOLVERCHIGUSA
 
 #include <ctime>
+#include <iomanip>
 #include "MonopoleFieldTools.hpp"
 
 namespace monsta
@@ -82,6 +83,8 @@ namespace monsta
       relEnergyChange = (energy - energyOld);
       if (isVerbose_)
       {
+	COUT << std::fixed;
+	COUT << std::setprecision(10);
         COUT << energy << std::endl;
         COUT << maxGrad_ << std::endl;
       }
@@ -98,6 +101,8 @@ namespace monsta
       relEnergyChange = (energy - energyOld);
       if (isVerbose_)
       {
+	COUT << std::fixed;
+	COUT << std::setprecision(10);
         COUT << energy << std::endl;
         COUT << maxGrad_ << std::endl;
       }
