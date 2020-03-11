@@ -2,6 +2,7 @@
 #define GRADDESCENTSOLVER_HPP
 
 #include <ctime>
+#include <iomanip>
 
 namespace monsta
 {
@@ -78,6 +79,8 @@ namespace monsta
         relEnergyChange = (energy - energyOld);
         if (isVerbose_)
         {
+          COUT << std::fixed;
+          COUT << std::setprecision(10);
           COUT << energy << std::endl;
           COUT << maxGrad_ << std::endl;
         }
@@ -93,6 +96,8 @@ namespace monsta
       relEnergyChange = (energy - energyOld);
       if (isVerbose_)
       {
+        COUT << std::fixed;
+        COUT << std::setprecision(10);
         COUT << energy << std::endl;
         COUT << maxGrad_ << std::endl;
       }
@@ -108,6 +113,8 @@ namespace monsta
       relEnergyChange = (energy - energyOld);
       if (isVerbose_)
       {
+        COUT << std::fixed;
+        COUT << std::setprecision(10);
         COUT << energy << std::endl;
         COUT << maxGrad_ << std::endl;
       }
