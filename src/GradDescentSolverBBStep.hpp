@@ -11,6 +11,7 @@ namespace monsta
     GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize);
     GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps);
     GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps, bool minimiseGrad);
+    GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize, int minSteps, bool minimiseGrad, bool constantStep);
 
     void setVerbosity(bool isVerbose) { isVerbose_ = isVerbose; };
 
@@ -27,6 +28,7 @@ namespace monsta
     bool isVerbose_ = true;
     int minSteps_ = 0;
     bool minimiseGrad_ = false;
+    bool constantStep_ = false;
     // LATfield2::Field< std::complex<double> > oldGrads;
 
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads);
@@ -60,6 +62,8 @@ namespace monsta
     energy = theory.computeEnergy(field);
     relEnergyChange = (energy - energyOld);
     int numIters = 1;
+
+    if (constantStep_) { stepSize_ = maxStepSize_; }
 
     double maxGradOld = 0;
     if (minimiseGrad_)
@@ -140,6 +144,7 @@ namespace monsta
     double stepChange = stepChangeNumerator / stepChangeDenominator;
     if (stepChange > 1e-8) { stepSize_ *= stepChange; }
     if (stepSize_ > maxStepSize_) { stepSize_ = maxStepSize_; }
+    if (constantStep_) { stepSize_ = maxStepSize_; }
 
     theory.applyBoundaryConditions(field);
     maxGrad_ = maxGrad;
