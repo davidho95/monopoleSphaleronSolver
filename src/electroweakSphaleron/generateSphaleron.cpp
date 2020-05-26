@@ -8,6 +8,7 @@
 #include "../../include/electroweakSphaleron/GradDescentSolverChigusaElectroweak.hpp"
 #include "../../include/Su2Tools.hpp"
 #include "../../include/MonopoleFileTools.hpp"
+#include "../../include/MonopoleFieldTools.hpp"
 #include "../../include/electroweakSphaleron/ElectroweakFieldTools.hpp"
 #include <iostream>
 #include <fstream>
