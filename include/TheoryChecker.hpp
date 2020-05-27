@@ -21,7 +21,6 @@ namespace monsta {
       int numMatrices = field.components() / (numRows*numCols);
 
       double maxErr = 0;
-      int count = 0;
       for (site.first(); site.test(); site.next())
       {
         for (int matIdx = 0; matIdx < numMatrices; matIdx++)
@@ -48,10 +47,16 @@ namespace monsta {
 
               if (verbose_ && abs(relError) > tol_)
               {
-                std::cout << "(" << matIdx << " " << rowIdx << " " << colIdx << ";"
-                                 << site.coord(0) << ","
-                                 << site.coord(1) << ","
-                                 << site.coord(2) << ") : ";
+                std::cout << "(" << matIdx << " " << rowIdx << " " << colIdx << ";";
+                for (int ii = 0; ii < site.lattice().dim(); ii++)
+                {
+                  cout << site.coord(ii);
+                  if (ii != site.lattice().dim() - 1)
+                  {
+                    cout << ",";
+                  }
+                }
+                cout << ") : ";
                 std::cout << suppliedGradVal << " " << fdGradVal << endl;
               }
             }
