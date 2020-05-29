@@ -136,7 +136,11 @@ namespace monsta
 
     for (site.first(); site.test(); site.next())
     {
-      fileStream << site.coord(0) << " " << site.coord(1) << " " << site.coord(2) << " " << std::endl;
+      for (int ii = 0; ii < field.lattice().dim(); ii++)
+      {
+        fileStream << site.coord(ii) << " ";
+      }
+      fileStream << std::endl;
     }
     fileStream.close();
     parallel.barrier();
