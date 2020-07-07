@@ -10,6 +10,13 @@ namespace monsta
   const monsta::Matrix pauli2({0, -1i, 1i, 0});
   const monsta::Matrix pauli3({1, 0, 0, -1});
 
+  const double pi = 4*atan(1);
+
+  int sign(double x)
+  {
+    return (x > 0) - (x < 0);
+  }
+
   bool su2Check(monsta::Matrix mat)
   {
     double zeroTol = 1e-5;
@@ -78,11 +85,11 @@ namespace monsta
 
   std::vector<double> su2LieAlgToVec(monsta::Matrix mat)
   {
-    if (!su2LieAlgCheck(mat))
-    { 
-      mat.print();
-      throw std::invalid_argument("Matrix is not an element of the SU(2) Lie algebra");
-    }
+    // if (!su2LieAlgCheck(mat))
+    // { 
+    //   mat.print();
+    //   throw std::invalid_argument("Matrix is not an element of the SU(2) Lie algebra");
+    // }
     std::vector<double> outputVec(3);
     outputVec[0] = 0.5*real(trace(mat*pauli1));
     outputVec[1] = 0.5*real(trace(mat*pauli2));
@@ -127,6 +134,11 @@ namespace monsta
     if ((ii == jj) || (jj == kk) || (kk == ii)) { return 0; }
     if ((ii + 1) % 3 == jj && (jj + 1) % 3 == kk) { return 1; }
     else { return -1; } 
+  }
+
+  Matrix commutator(Matrix mat1, Matrix mat2)
+  {
+    return mat1*mat2 - mat2*mat1;
   }
 }
 
