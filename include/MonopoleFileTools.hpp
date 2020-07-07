@@ -3,9 +3,8 @@
 
 #include "LATfield2.hpp"
 #include <complex>
-// #include "GeorgiGlashowSu2TheoryUnitary.hpp"
+#include "monopoleSphaleron/GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "electroweakSphaleron/ElectroweakTheory.hpp"
-#include "electroweakSphaleron/ElectroweakTheoryNonUnitary.hpp"
 #include "Su2Tools.hpp"
 #include <cstdio>
 #include <iostream>
@@ -23,7 +22,6 @@ namespace monsta
     {
       std::string fileToMergeName = fileBaseName + std::to_string(ii) + ".txt";
       ifstream fileToMerge(fileToMergeName.c_str());
-      if (!((bool)fileToMerge)) { COUT << "jonnyMorris" << endl; break; }
       fileToMerge.open(fileToMergeName);
       fileStream << fileToMerge.rdbuf();
       fileToMerge.close();
@@ -108,7 +106,8 @@ namespace monsta
       {
         coords.push_back(coord);
       }
-      bool isLocal = site.setCoord(coords[0], coords[1], coords[2]);
+      int* coordPtr = &coords[0];
+      bool isLocal = site.setCoord(coordPtr);
       if (!isLocal) { continue; }
       for (int cpt = 0; cpt < field.components(); cpt++)
       {
@@ -271,47 +270,6 @@ namespace monsta
     // mergeFiles(fileBaseName);
   }
 
-  void writeUnitaryGaugeField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
-  {
-    ofstream fileStream;
-    std::string fileName = getFileName(fileBaseName);
-    fileStream.open(fileName);
-
-    LATfield2::Site site(field.lattice());
-    for (site.first(); site.test(); site.next())
-    {
-      for (int ii = 0; ii < 3; ii++)
-      {
-        std::vector<double> su2Vec = su2ToVec(Matrix(field, site, ii));
-        fileStream << su2Vec[2] << " ";
-      }
-      fileStream << endl;
-    }
-    fileStream.close();
-    parallel.barrier();
-  }
-
-  void writeUnitaryWField(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
-  {
-    ofstream fileStream;
-    std::string fileName = getFileName(fileBaseName);
-    fileStream.open(fileName);
-
-    LATfield2::Site site(field.lattice());
-    for (site.first(); site.test(); site.next())
-    {
-      for (int ii = 0; ii < 3; ii++)
-      {
-        std::vector<double> su2Vec = su2ToVec(Matrix(field, site, ii));
-        fileStream << su2Vec[0] << " " << su2Vec[1] << " ";
-      }
-      fileStream << endl;
-    }
-    fileStream.close();
-    parallel.barrier();
-  }
-
-
   void writeEnergyDensity(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::Theory &theory)
   {
     ofstream fileStream;
@@ -324,25 +282,6 @@ namespace monsta
     for (site.first(); site.test(); site.next())
     {
       fileStream << theory.getLocalEnergyDensity(field, site) << std::endl;
-    }
-    fileStream.close();
-    parallel.barrier();
-
-    // mergeFiles(fileBaseName);
-  }
-
-  void writeSymmetricEnergyDensity(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::GeorgiGlashowSu2Theory &theory)
-  {
-    ofstream fileStream;
-    std::string fileName = getFileName(fileBaseName);
-    fileStream.open(fileName);
-
-    LATfield2::Site site(field.lattice());
-
-    std::vector<double> su2Vec;
-    for (site.first(); site.test(); site.next())
-    {
-      fileStream << theory.getSymmetricEnergyDensity(field, site) << std::endl;
     }
     fileStream.close();
     parallel.barrier();
