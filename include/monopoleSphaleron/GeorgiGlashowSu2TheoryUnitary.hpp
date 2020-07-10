@@ -22,6 +22,7 @@ namespace monsta {
     void postProcess(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
     void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
     double getHiggsMagnitude(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
+    Matrix getSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const;
 
   private:
     bool tHooftLineCheck(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
@@ -155,6 +156,7 @@ namespace monsta {
       kineticDerivMat = kineticDerivMat - scalarMat*gaugeMat*scalarMatShifted;
       grad = grad + 2.*kineticDerivMat;
 
+      // Project onto SU(2) Lie group: COMMENT OUT IF TESTING GRADIENTS
       grad = grad - 0.5*trace(grad*conjugateTranspose(Matrix(field, site, matIdx)))*Matrix(field, site, matIdx);
 
     } else {
@@ -325,6 +327,11 @@ namespace monsta {
         }
       }
     }
+  }
+
+  Matrix GeorgiGlashowSu2Theory::getSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
+  {
+    return Matrix(field, site, cpt);
   }
 
   monsta::Matrix GeorgiGlashowSu2Theory::getPlaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const

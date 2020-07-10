@@ -185,7 +185,7 @@ namespace monsta
     // mergeFiles(fileBaseName);
   }
 
-  void writeHiggsFieldMagnitude(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
+  void writeHiggsMagnitude(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName)
   {
     ofstream fileStream;
     std::string fileName = getFileName(fileBaseName);

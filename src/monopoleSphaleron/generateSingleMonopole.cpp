@@ -1,11 +1,11 @@
 #include "LATfield2.hpp"
 #include <complex>
-#include "../include/GeorgiGlashowSu2TheoryUnitary.hpp"
-#include "../include/Matrix.hpp"
-#include "../include/GradDescentSolverBBStep.hpp"
-#include "../include/Su2Tools.hpp"
-#include "../include/MonopoleFileTools.hpp"
-#include "../include/MonopoleFieldTools.hpp"
+#include "../../include/monopoleSphaleron/GeorgiGlashowSu2TheoryUnitary.hpp"
+#include "../../include/Matrix.hpp"
+#include "../../include/GradDescentSolverBBStep.hpp"
+#include "../../include/Su2Tools.hpp"
+#include "../../include/MonopoleFileTools.hpp"
+#include "../../include/MonopoleFieldTools.hpp"
 #include <iostream>
 #include <fstream>
 #include <ctime>
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 
   double initialStep = 0.001;
   double maxStepSize = 0.005/(vev);
-  double tol = 1e-4;
+  double tol = 1e-3;
   int maxNumSteps = 10000;
 
   monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {2, 0, 0}, true);
@@ -85,8 +85,7 @@ int main(int argc, char **argv)
 
   monsta::writeRawField(field, outputPath + "/rawData");
   monsta::writeCoords(field, outputPath + "/coords");
-  monsta::writeHiggsFieldUnitary(field, outputPath + "/higgsData");
+  monsta::writeHiggsMagnitude(field, outputPath + "/higgsData");
   monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
   monsta::writeEnergyDensity(field, outputPath + "/energyData", theory);
-  monsta::writeUnitaryGaugeField(field, outputPath + "/gaugeData");
 }
