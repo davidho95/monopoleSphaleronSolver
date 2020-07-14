@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   double selfCoupling = 1;
   double tanSqMixingAngle = 0.286;
   double fluxQuanta = 1;
-  double zAspect = 1;
+  int numInputFiles = 1;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -60,13 +60,12 @@ int main(int argc, char **argv)
       case 'i':
         inputPath = argv[++i];
         break;
-      case 'z':
-        zAspect = atof(argv[++i]);
-        break;
       case 'q':
         tanSqMixingAngle = atof(argv[++i]);
         break;
-
+      case 'N':
+        numInputFiles = atoi(argv[++i]);
+        break;
     }
   }
 
@@ -105,9 +104,17 @@ int main(int argc, char **argv)
 
   if (inputPath != "")
   {
-    minNumSteps = 1000;
-    monsta::readRawField(field, inputPath + "/rawData");
-    theory.applyBoundaryConditions(field);
+    if (numInputFiles == 1)
+    {
+      monsta::readFileWithCoords(field, inputPath + "/coords.txt", inputPath + "/rawData.txt");
+    }
+    else
+    {
+      for (int ii = 0; ii < numInputFiles; ii++)
+      {
+        monsta::readFileWithCoords(field, inputPath + "/coords" + to_string(ii) + ".txt", inputPath + "/rawData" + to_string(ii) + ".txt");
+      }
+    }
   }
   else
   {
