@@ -100,8 +100,8 @@ int main(int argc, char **argv)
   theory.applyBoundaryConditions(field);
 
   // theory.applyBoundaryConditions(field);
-  double E = theory.computeEnergy(field);
-  cout << E << endl;
+  // double E = theory.computeEnergy(field);
+  // cout << E << endl;
 
   if (inputPath != "")
   {
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
   solver.solve(theory, field);
   monsta::writeRawField(field, outputPath + "/rawData");
   monsta::writeCoords(field, outputPath + "/coords");
-  monsta::writeHiggsFieldMagnitude(field, outputPath + "/higgsData");
+  monsta::writeHiggsMagnitude(field, outputPath + "/higgsData");
   monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
   monsta::writeEnergyDensity(field, outputPath + "/energyData", theory);
 }
