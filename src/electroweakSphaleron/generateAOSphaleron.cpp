@@ -256,11 +256,11 @@ int main(int argc, char **argv)
     monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 300000, initialStep, maxStepSize, 1.2, 0.5);
     solved = chigusaSolver.solve(theory, AOSphaleronField, referenceField);
     extraSteps = extraSteps + 500;
-  }
 
-  monsta::writeRawField(AOSphaleronField, outputPath + "/rawData");
-  monsta::writeCoords(AOSphaleronField, outputPath + "/coords");
-  monsta::writeHiggsMagnitude(AOSphaleronField, outputPath + "/higgsData");
-  monsta::writeMagneticField(AOSphaleronField, outputPath + "/magneticFieldData", theory);
-  monsta::writeEnergyDensity(AOSphaleronField, outputPath + "/energyData", theory);
+    monsta::writeRawField(AOSphaleronField, outputPath + "/rawData");
+    monsta::writeCoords(AOSphaleronField, outputPath + "/coords");
+    monsta::writeHiggsMagnitude(AOSphaleronField, outputPath + "/higgsData");
+    monsta::writeMagneticField(AOSphaleronField, outputPath + "/magneticFieldData", theory);
+    monsta::writeEnergyDensity(AOSphaleronField, outputPath + "/energyData", theory);
+  }
 }
