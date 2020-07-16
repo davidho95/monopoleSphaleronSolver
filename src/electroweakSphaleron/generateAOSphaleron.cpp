@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 
     for (int ii = 0; ii < numMatrices; ii++)
     {
-      if (abs(coords[0]) < 6 && abs(coords[1]) < 6)
+      if (abs(coords[0]) < 6 && abs(coords[1]) < 6 && site.coord(2) < 200)
       {
         AOSphaleronField(site, ii, 0, 0) = sphaleronField(site, ii, 0, 0);
         AOSphaleronField(site, ii, 0, 1) = sphaleronField(site, ii, 0, 1);
@@ -184,51 +184,69 @@ int main(int argc, char **argv)
   monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize, 100, true);
   solver.solve(theory, AOSphaleronField);
 
-  solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
-  solver.solve(theory, AOSphaleronField);
-
-  LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
-
+  LATfield2::Field<complex<double> > savedField(lattice, numMatrices, numRows, numCols, 0);
   for (site.first(); site.test(); site.next())
   {
-    for (int ii = 0; ii < 4; ii++)
+    for (int matIdx = 0; matIdx < 4; matIdx++)
     {
-      monsta::Matrix gradMat = theory.getLocalGradient(AOSphaleronField, site, ii);
-      monsta::Matrix fieldMat(AOSphaleronField, site, ii);
-      if (ii < 3)
+      savedField(site, matIdx, 0, 0) = AOSphaleronField(site, matIdx, 0, 0);
+      savedField(site, matIdx, 0, 1) = AOSphaleronField(site, matIdx, 0, 1);
+      savedField(site, matIdx, 1, 0) = AOSphaleronField(site, matIdx, 1, 0);
+      savedField(site, matIdx, 1, 1) = AOSphaleronField(site, matIdx, 1, 1);
+    }
+  }
+
+  bool solved = false;
+
+  while (!solved)
+  {
+    solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
+    solver.solve(theory, AOSphaleronField);
+
+    LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
+
+    for (site.first(); site.test(); site.next())
+    {
+      for (int ii = 0; ii < 4; ii++)
       {
-        gradMat = gradMat - 0.5*real(monsta::trace(gradMat*conjugateTranspose(fieldMat)))*fieldMat;
-      }
-      else
-      {
-        for (int jj = 1; jj < 4; jj++)
+        monsta::Matrix gradMat = theory.getLocalGradient(AOSphaleronField, site, ii);
+        monsta::Matrix fieldMat(AOSphaleronField, site, ii);
+        if (ii < 3)
         {
-          gradMat(jj) = gradMat(jj) - real(gradMat(jj)*conj(fieldMat(jj)))*fieldMat(jj);
+          gradMat = gradMat - 0.5*real(monsta::trace(gradMat*conjugateTranspose(fieldMat)))*fieldMat;
         }
-        // cout << gradMat(0,0) << endl;
+        else
+        {
+          for (int jj = 1; jj < 4; jj++)
+          {
+            gradMat(jj) = gradMat(jj) - real(gradMat(jj)*conj(fieldMat(jj)))*fieldMat(jj);
+          }
+          // cout << gradMat(0,0) << endl;
+        }
+        // cout << real(trace(gradMat*gradMat)) << endl;
+        referenceField(site, ii, 0, 0) = gradMat(0, 0);
+        referenceField(site, ii, 0, 1) = gradMat(0, 1);
+        referenceField(site, ii, 1, 0) = gradMat(1, 0);
+        referenceField(site, ii, 1, 1) = gradMat(1, 1);
       }
-      // cout << real(trace(gradMat*gradMat)) << endl;
-      referenceField(site, ii, 0, 0) = gradMat(0, 0);
-      referenceField(site, ii, 0, 1) = gradMat(0, 1);
-      referenceField(site, ii, 1, 0) = gradMat(1, 0);
-      referenceField(site, ii, 1, 1) = gradMat(1, 1);
     }
-  }
 
-  double norm = monsta::innerProduct(referenceField, referenceField);
-  // cout << norm << endl;
+    double norm = monsta::innerProduct(referenceField, referenceField);
+    // cout << norm << endl;
 
-  for (site.first(); site.test(); site.next())
-  {
-    for (int ii = 0; ii < referenceField.components(); ii++)
+    for (site.first(); site.test(); site.next())
     {
-      referenceField(site, ii) = referenceField(site, ii)/ sqrt(norm);
+      for (int ii = 0; ii < referenceField.components(); ii++)
+      {
+        referenceField(site, ii) = referenceField(site, ii)/ sqrt(norm);
+      }
     }
+
+
+    monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 300000, initialStep, maxStepSize, 1.2, 0.5);
+    solved = chigusaSolver.solve(theory, AOSphaleronField, referenceField);
+    extraSteps = extraSteps + 500;
   }
-
-
-  monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 300000, initialStep, maxStepSize, 1.2, 0.5);
-  chigusaSolver.solve(theory, AOSphaleronField, referenceField);
 
   monsta::writeRawField(AOSphaleronField, outputPath + "/rawData");
   monsta::writeCoords(AOSphaleronField, outputPath + "/coords");
