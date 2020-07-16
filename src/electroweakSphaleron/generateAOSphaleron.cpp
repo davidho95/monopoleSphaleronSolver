@@ -210,7 +210,7 @@ int main(int argc, char **argv)
         AOSphaleronField(site, matIdx, 1, 1) = savedField(site, matIdx, 1, 1);
       }
     }
-    solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
+    solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps);
     solver.solve(theory, AOSphaleronField);
 
     LATfield2::Field<complex<double> > referenceField(lattice, numMatrices, numRows, numCols, 0);
