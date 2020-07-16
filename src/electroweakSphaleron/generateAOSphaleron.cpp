@@ -200,6 +200,16 @@ int main(int argc, char **argv)
 
   while (!solved)
   {
+    for (site.first(); site.test(); site.next())
+    {
+      for (int matIdx = 0; matIdx < 4; matIdx++)
+      {
+        AOSphaleronField(site, matIdx, 0, 0) = savedField(site, matIdx, 0, 0);
+        AOSphaleronField(site, matIdx, 0, 1) = savedField(site, matIdx, 0, 1);
+        AOSphaleronField(site, matIdx, 1, 0) = savedField(site, matIdx, 1, 0);
+        AOSphaleronField(site, matIdx, 1, 1) = savedField(site, matIdx, 1, 1);
+      }
+    }
     solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps, true);
     solver.solve(theory, AOSphaleronField);
 
