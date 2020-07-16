@@ -232,7 +232,7 @@ int main(int argc, char **argv)
 
   monsta::writeRawField(AOSphaleronField, outputPath + "/rawData");
   monsta::writeCoords(AOSphaleronField, outputPath + "/coords");
-  monsta::writeHiggsFieldMagnitude(AOSphaleronField, outputPath + "/higgsData");
+  monsta::writeHiggsMagnitude(AOSphaleronField, outputPath + "/higgsData");
   monsta::writeMagneticField(AOSphaleronField, outputPath + "/magneticFieldData", theory);
   monsta::writeEnergyDensity(AOSphaleronField, outputPath + "/energyData", theory);
 }
