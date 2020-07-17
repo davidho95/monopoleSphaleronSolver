@@ -24,13 +24,13 @@ namespace monsta
 
     void setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize);
     void setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize, std::vector<int> skipCpts);
+    double maxGrad_ = 1e6;
 
   private:
     double tol_;
     int maxIterations_;
     double stepSize_;
     double maxStepSize_;
-    double maxGrad_ = 1e6;
     double relEnergyChange = 1e6;
     double energy;
     double energyOld;
