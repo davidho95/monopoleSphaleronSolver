@@ -150,7 +150,18 @@ int main(int argc, char **argv)
     theory.applyBoundaryConditions(AOVacuumField);
   }
 
-  monsta::readRawField(sphaleronField, sphaleronInputPath + "/rawData");
+  if (numInputFiles == 1)
+  {
+    monsta::readFileWithCoords(sphaleronField, sphaleronInputPath + "/coords.txt", sphaleronInputPath + "/rawData.txt");
+  }
+  else
+  {
+    for (int ii = 0; ii < numInputFiles; ii++)
+    {
+      monsta::readFileWithCoords(sphaleronField, sphaleronInputPath + "/coords" + to_string(ii) + ".txt", sphaleronInputPath + "/rawData" + to_string(ii) + ".txt");
+    }
+  }
+  theory.applyBoundaryConditions(AOVacuumField);
   theory.applyBoundaryConditions(sphaleronField);
   monsta::addConstantMagneticField(sphaleronField, theory, fluxQuanta, 2);
 
