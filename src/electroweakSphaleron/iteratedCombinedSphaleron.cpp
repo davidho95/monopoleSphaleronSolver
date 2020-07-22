@@ -103,8 +103,8 @@ int main(int argc, char **argv)
 
   LATfield2::Site site(lattice);
 
-  double initialStep = 0.01;
-  double maxStepSize = 0.01;
+  double initialStep = 0.005;
+  double maxStepSize = 0.005;
   double tol = 5e-5;
   int minNumSteps = 20000;
   int maxNumSteps = 200000;
@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 
     for (int ii = 0; ii < numMatrices; ii++)
     {
-      if (abs(coords[0]) < 6 && abs(coords[1]) < 6 && site.coord(2) < 200)
+      if (abs(coords[0]) < 6 && abs(coords[1]) < 6)
       {
         AOSphaleronField(site, ii, 0, 0) = sphaleronField(site, ii, 0, 0);
         AOSphaleronField(site, ii, 0, 1) = sphaleronField(site, ii, 0, 1);
@@ -213,6 +213,8 @@ int main(int argc, char **argv)
     solver = monsta::GradDescentSolver(tol, extraSteps, initialStep, maxStepSize, extraSteps);
     solver.solve(theory, AOSphaleronField);
 
+    double abortGrad = 1.1*solver.maxGrad_;
+
     bool solved2 = false;
     int numIters = 0;
 
@@ -259,13 +261,14 @@ int main(int argc, char **argv)
       }
 
 
-      monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 1000, initialStep, maxStepSize, 1.2, 0.05);
+      monsta::GradDescentSolverChigusa chigusaSolver(5e-4, 5000000, initialStep, maxStepSize, 1.2, abortGrad, 1000, true);
       solved2 = chigusaSolver.solve(theory, AOSphaleronField, referenceField);
       solved = solved2;
+      numIters = maxNumSteps;
 
-      if (chigusaSolver.maxGrad_ > 0.05) { break; }
+      if (chigusaSolver.maxGrad_ > 0.005) { break; }
     }
-    extraSteps = extraSteps + 500;
+    extraSteps = extraSteps + 2500;
 
     monsta::writeRawField(AOSphaleronField, outputPath + "/rawData");
     monsta::writeCoords(AOSphaleronField, outputPath + "/coords");
