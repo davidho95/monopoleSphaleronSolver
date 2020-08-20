@@ -6,6 +6,9 @@
 #include "../../include/Su2Tools.hpp"
 #include "../../include/MonopoleFileTools.hpp"
 #include "../../include/MonopoleFieldTools.hpp"
+#include "../../include/monopoleInstanton/GeorgiGlashowSu2Theory4d.hpp"
+#include "../../include/monopoleInstanton/InstantonFieldTools.hpp"
+#include "../../include/monopoleInstanton/InstantonFileTools.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -22,6 +25,7 @@ int main(int argc, char **argv)
   double selfCoupling = 1;
   int sep = sz/2;
   double xAspect = 1;
+  int fluxQuanta = 0;
 
   for (int i=1 ; i < argc ; i++ ){
     if ( argv[i][0] != '-' )
@@ -57,6 +61,9 @@ int main(int argc, char **argv)
       case 'x':
         xAspect = atof(argv[++i]);
         break;
+      case 'B':
+        fluxQuanta = atoi(argv[++i]);
+        break;
     }
   }
 
@@ -77,36 +84,36 @@ int main(int argc, char **argv)
 
   LATfield2::Site site(lattice);
 
-  double initialStep = 0.01;
-  double maxStepSize = 0.05;
+  double initialStep = 0.0005;
+  double maxStepSize = 0.001;
   double tol = 1e-3;
-  int maxNumSteps = 20000;
-
-  monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {2, 0, 0}, true);
-  monsta::readRawField(field, inputPath + "/rawData");
-  theory.applyBoundaryConditions(field);
+  int maxNumSteps = 1000;
 
   monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
+  monsta::GeorgiGlashowSu2Theory4d theory4d(gaugeCoupling, vev, selfCoupling);
+  LATfield2::Field<complex<double> > ringField(lattice, numMatrices, numRows, numCols, 0);
 
-  LATfield2::Field<complex<double> > centredField(lattice, numMatrices, numRows, numCols, 0);
-  std::vector<int> monopolePos = monsta::findMonopole(field, theory);
-  int shiftNum = ((sz/2 - 1 - monopolePos[0]) + sz) % sz;
-  monsta::circShift(field, centredField, theory, shiftNum, 0, true);
+  monsta::readRawField(ringField, inputPath + "/rawData");
+  for (site.first(); site.test(); site.next())
+  {
+    for (int ii = 0; ii < 4; ii++)
+    {
+      theory4d.postProcess(field, site, ii);
+    }
+  }
+  theory4d.applyBoundaryConditions(ringField);
 
-  monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
-  LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
+  monsta::addConstantMagneticField(ringField, theory4d, -fluxQuanta);
 
-  monsta::setPairInitialConds2(field, pairField, periodicTheory, sep);
-  // monsta::addConstantMagneticField(pairField, periodicTheory, -1);
+  double E = theory4d.computeEnergy(ringField);
+  COUT << E << endl;
 
-  monsta::scaleVev(pairField, periodicTheory);
+  solver.solve(theory4d, ringField);
 
-  solver.solve(periodicTheory, pairField);
-
-  monsta::writeRawField(pairField, outputPath + "/rawData");
-  monsta::writeCoords(pairField, outputPath + "/coords");
-  monsta::writeHiggsMagnitude(pairField, outputPath + "/higgsData");
-  monsta::writeMagneticField(pairField, outputPath + "/magneticFieldData", periodicTheory);
-  monsta::writeEnergyDensity(pairField, outputPath + "/energyData", periodicTheory);
-
+  monsta::writeRawField(ringField, outputPath + "/rawData");
+  monsta::writeCoords(ringField, outputPath + "/coords");
+  monsta::writeHiggsMagnitude(ringField, outputPath + "/higgsData");
+  monsta::writeMagneticField(ringField, outputPath + "/magneticFieldData", theory4d);
+  monsta::writeEnergyDensity(ringField, outputPath + "/energyData", theory4d);
+  monsta::writeGradients(ringField, outputPath + "/gradData", theory4d);
 }

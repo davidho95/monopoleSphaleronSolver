@@ -15,6 +15,7 @@ int main(int argc, char **argv)
   clock_t begin = clock();
 
   std::string outputPath;
+  std::string inputPath;
   int sz = 16;
   int n = 2;
   int m = 2;
@@ -51,6 +52,9 @@ int main(int argc, char **argv)
       case 'x':
         xAspect = atof(argv[++i]);
         break;
+      case 'i':
+        inputPath = argv[++i];
+        break;
     }
   }
 
@@ -71,14 +75,27 @@ int main(int argc, char **argv)
 
   LATfield2::Site site(lattice);
 
-  double initialStep = 0.001;
-  double maxStepSize = 0.005/(vev);
+  double initialStep = 0.01;
+  double maxStepSize = 0.01;;
   double tol = 1e-3;
   int maxNumSteps = 10000;
 
   monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {2, 0, 0}, true);
-  monsta::setSingleMonopoleInitialConditions(field, theory);
-  theory.applyBoundaryConditions(field);
+
+  if (inputPath != "")
+  {
+    COUT << inputPath << endl;
+    monsta::readRawField(field, inputPath + "/rawData");
+    theory.applyBoundaryConditions(field);
+  }
+  else
+  {
+    monsta::setSingleMonopoleInitialConditions(field, theory);
+    theory.applyBoundaryConditions(field);
+  }
+
+  double E = theory.computeEnergy(field);
+  cout << E << endl;
 
   monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
   solver.solve(theory, field);
