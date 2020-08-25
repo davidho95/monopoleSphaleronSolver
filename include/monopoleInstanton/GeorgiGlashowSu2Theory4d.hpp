@@ -214,6 +214,13 @@ namespace monsta {
       grad(0,0) = grad(0,0) + 8.0*siteJacobian*selfCoupling_*field(site, 3, 0, 0)*(2.0*pow(field(site, 3, 0, 0),2) - pow(vev_, 2));
     }
 
+    // Scaling: COMMENT OUT IF TESTING GRADIENTS
+    double r = getRFromSite(site);
+    if (abs(r) > 1e-10)
+    {
+      grad = grad/abs(r);
+    }
+
     return pi*grad;
   }
 
@@ -248,43 +255,42 @@ namespace monsta {
   void GeorgiGlashowSu2Theory4d::applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const
   {
     field.updateHalo();
-    return;
+    
+    // LATfield2::Site site(field.lattice());
+    // int xSize = field.lattice().size(0);
+    // int ySize = field.lattice().size(1);
+    // int zSize = field.lattice().size(2);
 
-    LATfield2::Site site(field.lattice());
-    int xSize = field.lattice().size(0);
-    int ySize = field.lattice().size(1);
-    int zSize = field.lattice().size(2);
+    // double flux = fluxQuanta_*4*pi;
 
-    double flux = fluxQuanta_*4*pi;
-
-    for (site.haloFirst(); site.haloTest(); site.haloNext())
-    {
-      int xCoord = site.coord(0);
-      int yCoord = site.coord(1);
-      int zCoord = site.coord(2);
-      if (xCoord > 0 && xCoord < xSize - 1) { continue; }
-      {
-        for (int ii = 0; ii < 3; ii++)
-        {
-          std::vector<double> su2Vec = {0, 0, 0};
-          if (ii == 2)
-          {
-            su2Vec[2] += 0.5*flux/pow(ySize,2)*(yCoord - 0.5);
-            if (yCoord > 0)
-            {
-              su2Vec[2] -= 0.5*flux/ySize;
-            }
-          }
-          if (ii == 1 && yCoord == 0)
-          {
-            su2Vec[2] -= 0.5*zCoord*flux/zSize;
-          }
-          monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
-          setSu2Link(field, site, ii, su2Mat);
-        }
-        setHiggsMagnitude(field, site, vev_/sqrt(2));
-      }
-    }
+    // for (site.haloFirst(); site.haloTest(); site.haloNext())
+    // {
+    //   int xCoord = site.coord(0);
+    //   int yCoord = site.coord(1);
+    //   int zCoord = site.coord(2);
+    //   if (xCoord > 0 && xCoord < xSize - 1) { continue; }
+    //   {
+    //     for (int ii = 0; ii < 3; ii++)
+    //     {
+    //       std::vector<double> su2Vec = {0, 0, 0};
+    //       if (ii == 2)
+    //       {
+    //         su2Vec[2] += 0.5*flux/pow(ySize,2)*(yCoord - 0.5);
+    //         if (yCoord > 0)
+    //         {
+    //           su2Vec[2] -= 0.5*flux/ySize;
+    //         }
+    //       }
+    //       if (ii == 1 && yCoord == 0)
+    //       {
+    //         su2Vec[2] -= 0.5*zCoord*flux/zSize;
+    //       }
+    //       monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
+    //       setSu2Link(field, site, ii, su2Mat);
+    //     }
+    //     setHiggsMagnitude(field, site, vev_/sqrt(2));
+    //   }
+    // }
   }
 
   void GeorgiGlashowSu2Theory4d::applyDirichletBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const

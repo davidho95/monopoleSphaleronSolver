@@ -112,12 +112,61 @@ namespace monsta
         }
         monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
         theory.setSu2Link(field, site, ii, su2Mat);
+        theory.postProcess(field, site, ii);
       }
     }
 
     theory.applyBoundaryConditions(field);
   }
 
+  void scaleVev(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory4d &theory)
+  {
+    LATfield2::Site site(field.lattice());
+    double oldVev = 0;
+    for (site.first(); site.test(); site.next())
+    {
+      if (abs(theory.getHiggsMagnitude(field, site))*sqrt(2) > oldVev)
+      {
+        oldVev = abs(theory.getHiggsMagnitude(field, site))*sqrt(2);
+      }
+    }
+    parallel.max(oldVev);
+    
+    double higgsRatio = theory.getVev() / oldVev;
+
+    for (site.first(); site.test(); site.next())
+    {
+      field(site, 3, 0, 0) *= higgsRatio;
+    }
+    theory.applyBoundaryConditions(field);
+  }
+
+  void symmetriseField(LATfield2::Field< std::complex<double> > &field)
+  {
+    LATfield2::Site site(field.lattice());
+    LATfield2::Site site2(field.lattice());
+
+    int xSz = field.lattice().size(0);
+    int ySz = field.lattice().size(1);
+    int zSz = field.lattice().size(2);
+
+    for(site.first(); site.test(); site.next())
+    {
+      if (site.coord(0) >= xSz / 2) { break; }
+      int xCoord = site.coord(0);
+      int yCoord = site.coord(1);
+      int zCoord = site.coord(2);
+      site2.setCoord(xSz - xCoord, yCoord, zCoord);
+
+      for (int ii = 0; ii < 4; ii++)
+      {
+        field(site2, ii, 0, 0) = field(site, ii, 0, 0);
+        field(site2, ii, 0, 1) = field(site, ii, 0, 1);
+        field(site2, ii, 1, 0) = field(site, ii, 1, 0);
+        field(site2, ii, 1, 1) = field(site, ii, 1, 1);
+      }
+  }
+  }
 
   
 }

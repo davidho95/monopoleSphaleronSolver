@@ -184,13 +184,35 @@ namespace monsta
 
     LATfield2::Site site(field.lattice());
 
-    double gradVal = 0;
     for (site.first(); site.test(); site.next())
     {
+      double gradVal = 0;
       for (int ii = 0; ii < 4; ii++)
       {
         Matrix grad = theory.getLocalGradient(field, site, ii);
-        gradVal += real(trace(grad*grad));
+        gradVal += real(trace(grad*conjugateTranspose(grad)));
+      }
+      fileStream << gradVal << endl;
+    }
+    fileStream.close();
+    parallel.barrier();
+  }
+
+  void writeGradients(LATfield2::Field< std::complex<double> > &field, std::string fileBaseName, monsta::GeorgiGlashowSu2Theory &theory)
+  {
+    ofstream fileStream;
+    std::string fileName = getFileName(fileBaseName);
+    fileStream.open(fileName);
+
+    LATfield2::Site site(field.lattice());
+
+    for (site.first(); site.test(); site.next())
+    {
+      double gradVal = 0;
+      for (int ii = 0; ii < 4; ii++)
+      {
+        Matrix grad = theory.getLocalGradient(field, site, ii);
+        gradVal += real(trace(grad*conjugateTranspose(grad)));
       }
       fileStream << gradVal << endl;
     }
