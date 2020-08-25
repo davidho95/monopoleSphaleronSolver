@@ -1,6 +1,7 @@
 #ifndef GRADDESCENTSOLVER_HPP
 #define GRADDESCENTSOLVER_HPP
 
+#include "Theory.hpp"
 #include <ctime>
 #include <iomanip>
 
@@ -64,7 +65,7 @@ namespace monsta
     iterate(field, theory, oldGrads);
     energyOld = energy;
     energy = theory.computeEnergy(field);
-    relEnergyChange = (energy - energyOld);
+    relEnergyChange = abs(energy - energyOld) / energy;
     int numIters = 1;
 
     if (constantStep_) { stepSize_ = maxStepSize_; }
@@ -79,7 +80,7 @@ namespace monsta
         iterate(field, theory, oldGrads);
         energyOld = energy;
         energy = theory.computeEnergy(field);
-        relEnergyChange = (energy - energyOld);
+        relEnergyChange = abs(energy - energyOld) / energy;
         if (isVerbose_)
         {
           COUT << std::fixed;
@@ -96,7 +97,7 @@ namespace monsta
       iterate(field, theory, oldGrads);
       energyOld = energy;
       energy = theory.computeEnergy(field);
-      relEnergyChange = (energy - energyOld);
+      relEnergyChange = abs(energy - energyOld) / energy;
       if (isVerbose_)
       {
         COUT << std::fixed;
@@ -113,7 +114,7 @@ namespace monsta
       iterate(field, theory, oldGrads);
       energyOld = energy;
       energy = theory.computeEnergy(field);
-      relEnergyChange = (energy - energyOld);
+      relEnergyChange = abs(energy - energyOld) / energy;
       if (isVerbose_)
       {
         COUT << std::fixed;
@@ -196,7 +197,7 @@ namespace monsta
             }
             if (matIdx == 3)
             {
-              // if (abs(projGradVal) > abs(maxGrad)) { maxGrad = abs(projGradVal); }
+              if (abs(projGradVal) > abs(maxGrad)) { maxGrad = abs(projGradVal); }
               std::complex<double> oldGradVal = oldGrads(site, rowIdx, colIdx);
 
               stepChangeNumerator += abs(real(oldGradVal) * (real(oldGradVal - gradVal)));
