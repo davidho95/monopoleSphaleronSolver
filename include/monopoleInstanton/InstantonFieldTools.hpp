@@ -165,7 +165,50 @@ namespace monsta
         field(site2, ii, 1, 0) = field(site, ii, 1, 0);
         field(site2, ii, 1, 1) = field(site, ii, 1, 1);
       }
+    }
   }
+
+  void contractInstanton(LATfield2::Field< std::complex<double> > &pairField,
+    LATfield2::Field< std::complex<double> > &contractedField, monsta::Theory &theory)
+  {
+    LATfield2::Site siteFrom(pairField.lattice());
+    LATfield2::Site siteTo(contractedField.lattice());
+  for (siteTo.first(); siteTo.test(); siteTo.next())
+  {
+    int xCoord = siteTo.coord(0);
+    int yCoord = siteTo.coord(1);
+    int zCoord = siteTo.coord(2);
+
+    int xCoordFrom;
+    int xSize = pairField.lattice().size(0);
+    if (xCoord > 0 && xCoord < xSize/2)
+    {
+      xCoordFrom = xCoord - 1;
+    }
+    else if (xCoord < xSize - 1)
+    {
+      xCoordFrom = xCoord + 1;
+    }
+    else
+    {
+      xCoord = xCoord;
+    }
+
+    siteFrom.setCoord(xCoordFrom, yCoord, zCoord);
+
+    int numMatrices = 4;
+    {
+      for (int ii = 0; ii < numMatrices; ii++)
+      {
+        monsta::Matrix matrixTo(pairField, siteFrom, ii);
+        contractedField(siteTo, ii, 0, 0) = matrixTo(0, 0);
+        contractedField(siteTo, ii, 0, 1) = matrixTo(0, 1);
+        contractedField(siteTo, ii, 1, 0) = matrixTo(1, 0);
+        contractedField(siteTo, ii, 1, 1) = matrixTo(1, 1);
+      }
+    }
+  }
+  theory.applyBoundaryConditions(contractedField);
   }
 
   
