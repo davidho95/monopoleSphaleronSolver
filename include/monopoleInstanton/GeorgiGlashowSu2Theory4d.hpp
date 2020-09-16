@@ -73,13 +73,13 @@ namespace monsta {
     int xSize = site.lattice().size(0);
     if (site.coord(0) == -1)
     {
-      return xSize - xSize / 2 - 1;
+      return xSize - xSize / 2 - 0.5;
     }
     if (site.coord(0) == xSize)
     {
-      return -xSize / 2;
+      return -xSize / 2 + 0.5;
     }
-    return site.coord(0) - xSize / 2;
+    return site.coord(0) - xSize / 2 + 0.5;
   }
 
   double GeorgiGlashowSu2Theory4d::getSiteJacobian(LATfield2::Site &site) const
@@ -248,6 +248,13 @@ namespace monsta {
     }
     else 
     {
+      LATfield2::Site oppositeSite(site.lattice());
+      // int xCoord = site.coord(0);
+      // int yCoord = site.coord(1);
+      // int zCoord = site.coord(2);
+      // int xSize = field.lattice().size(0);
+      // oppositeSite.setCoord(xSize - xCoord, yCoord, zCoord);
+      // field(site, 3, 0, 0) = field(oppositeSite, 3, 0, 0);
       field(site, matIdx, 0, 0) = real(field(site, matIdx, 0, 0));
     }
   }
