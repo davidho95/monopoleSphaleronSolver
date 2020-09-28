@@ -106,6 +106,7 @@ namespace monsta
         COUT << maxGrad_ << std::endl;
       }
     }
+    
     while (maxGrad_ > tol_ && numIters < maxIterations_)
     {
       if (minimiseGrad_ && maxGradOld < maxGrad_) { break; }
@@ -126,12 +127,12 @@ namespace monsta
 
     double finalEnergy = theory.computeEnergy(field);
 
-    if (numIters < maxIterations_) {
+    if (maxGrad_ < tol_) {
       COUT << "Gradient descent finished in " << numIters << " iterations." << std::endl;
       COUT << "Minimum energy: " << finalEnergy << std::endl;
       return true;
     } else {
-      COUT << "Gradient descent aborted after " << maxIterations_ << " iterations." << std::endl;
+      COUT << "Gradient descent aborted after " << numIters << " iterations." << std::endl;
       COUT << "Energy reached: " << finalEnergy << std::endl;
       return false;
     }
