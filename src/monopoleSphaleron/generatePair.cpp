@@ -98,6 +98,8 @@ int main(int argc, char **argv)
 
   monsta::setPairInitialConds2(field, pairField, periodicTheory, sep);
   // monsta::addConstantMagneticField(pairField, periodicTheory, -1);
+  monsta::circShift(pairField, field, periodicTheory, -1, 0, false);
+  monsta::circShift(field, pairField, periodicTheory, 0, 0, false);
 
   monsta::scaleVev(pairField, periodicTheory);
 
