@@ -166,7 +166,7 @@ namespace monsta {
     {
       tempSite = site + ii;
       Matrix covDeriv = field(tempSite, 3, 0, 0)*Matrix(field, site, ii)*pauli3*conjugateTranspose(Matrix(field, site, ii)) - field(site, 3, 0, 0)*pauli3;
-      E += 0.5*real(trace(covDeriv*covDeriv));
+      E += 0.5*jacobian*real(trace(covDeriv*covDeriv));
       tempSite = site - ii;
       covDeriv = field(site, 3, 0, 0)*Matrix(field, tempSite, ii)*pauli3*conjugateTranspose(Matrix(field, tempSite, ii)) - field(tempSite, 3, 0, 0)*pauli3;
       E += 0.5*jacobian*real(trace(covDeriv*covDeriv));
