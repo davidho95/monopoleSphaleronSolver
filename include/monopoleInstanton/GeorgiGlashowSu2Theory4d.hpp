@@ -309,7 +309,7 @@ namespace monsta {
           if (matIdx == 0) { continue; }
           Matrix su2Mat = getSu2Link(field, site, matIdx);
           su2Mat = pauli3*su2Mat*pauli3;
-          setSu2Link(field, siteShiftedFwd, matIdx, su2Mat);
+          // setSu2Link(field, siteShiftedFwd, matIdx, su2Mat);
         }
         else
         {
