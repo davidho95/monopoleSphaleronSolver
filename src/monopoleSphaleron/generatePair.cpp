@@ -1,10 +1,13 @@
 #include "LATfield2.hpp"
 #include <complex>
 #include "../../include/monopoleSphaleron/GeorgiGlashowSu2TheoryUnitary.hpp"
+#include "../../include/monopoleInstanton/GeorgiGlashowSu2Theory4d.hpp"
 #include "../../include/Matrix.hpp"
 #include "../../include/GradDescentSolverBBStep.hpp"
+#include "../../include/GradDescentSolverBBStepNoCheckerboard.hpp"
 #include "../../include/Su2Tools.hpp"
 #include "../../include/MonopoleFileTools.hpp"
+#include "../../include/monopoleInstanton/InstantonFileTools.hpp"
 #include "../../include/MonopoleFieldTools.hpp"
 #include <iostream>
 #include <fstream>
@@ -78,20 +81,24 @@ int main(int argc, char **argv)
   LATfield2::Site site(lattice);
 
   double initialStep = 0.01;
-  double maxStepSize = 0.05;
-  double tol = 1e-3;
-  int maxNumSteps = 20000;
+  double maxStepSize = 0.02;
+  double tol = 1e-5;
+  int maxNumSteps = 10000;
 
   monsta::GeorgiGlashowSu2Theory theory(gaugeCoupling, vev, selfCoupling, {2, 0, 0}, true);
+  monsta::GeorgiGlashowSu2Theory4d theory4d(gaugeCoupling, vev, selfCoupling);
   monsta::readRawField(field, inputPath + "/rawData");
   theory.applyBoundaryConditions(field);
 
-  monsta::GradDescentSolver solver(tol, maxNumSteps, initialStep, maxStepSize);
+  monsta::GradDescentSolverNoCheckerboard solver(tol, maxNumSteps, initialStep, maxStepSize, 2000);
 
   LATfield2::Field<complex<double> > centredField(lattice, numMatrices, numRows, numCols, 0);
   std::vector<int> monopolePos = monsta::findMonopole(field, theory);
-  int shiftNum = ((sz/2 - 1 - monopolePos[0]) + sz) % sz;
-  monsta::circShift(field, centredField, theory, shiftNum, 0, true);
+  int shiftNum0 = ((sz/2 - 1 - monopolePos[0]) + sz) % sz;
+  int shiftNum1 = ((sz/2 - 1 - monopolePos[1]) + sz) % sz;
+  int shiftNum2 = ((sz/2 - 1 - monopolePos[2]) + sz) % sz;
+  cout << shiftNum0 << endl;
+  monsta::circShift2(field, centredField, theory, shiftNum0, 0, true);
 
   monsta::GeorgiGlashowSu2Theory periodicTheory(gaugeCoupling, vev, selfCoupling, {0, 0, 0}, false);
   LATfield2::Field<complex<double> > pairField(lattice, numMatrices, numRows, numCols, 0);
@@ -99,16 +106,47 @@ int main(int argc, char **argv)
   monsta::setPairInitialConds2(field, pairField, periodicTheory, sep);
   // monsta::addConstantMagneticField(pairField, periodicTheory, -1);
   monsta::circShift(pairField, field, periodicTheory, -1, 0, false);
+  COUT << shiftNum2 << endl;
+  monsta::circShift2(field, pairField, periodicTheory, shiftNum1, 1, false);
+  monsta::circShift2(pairField, field, periodicTheory, shiftNum2, 2, false);
   monsta::circShift(field, pairField, periodicTheory, 0, 0, false);
 
+
   monsta::scaleVev(pairField, periodicTheory);
+
+  LATfield2::Site site2(pairField.lattice());
+  // for(site.first(); site.test(); site.next())
+  // {
+  //   if (site.coord(0) >= xSz / 2) { continue; }
+  //   int xCoord = site.coord(0);
+  //   int yCoord = site.coord(1);
+  //   int zCoord = site.coord(2);
+
+  //   for (int ii = 0; ii < 4; ii++)
+  //   {
+  //     monsta::Matrix fieldMat(pairField, site, ii);
+  //     if (ii == 0) 
+  //     {
+  //       site2.setCoord(xSz - xCoord, yCoord, zCoord); 
+  //     }
+  //     else
+  //     {
+  //       site2.setCoord(xSz - xCoord - 1, yCoord, zCoord);
+  //     }
+  //     if (ii != 3 ) { fieldMat = monsta::pauli3*fieldMat*monsta::pauli3; }
+  //     pairField(site2, ii, 0, 0) = fieldMat(0, 0);
+  //     pairField(site2, ii, 0, 1) = fieldMat(0, 1);
+  //     pairField(site2, ii, 1, 0) = fieldMat(1, 0);
+  //     pairField(site2, ii, 1, 1) = fieldMat(1, 1);
+  //   }
+  // }
 
   solver.solve(periodicTheory, pairField);
 
   monsta::writeRawField(pairField, outputPath + "/rawData");
   monsta::writeCoords(pairField, outputPath + "/coords");
   monsta::writeHiggsMagnitude(pairField, outputPath + "/higgsData");
-  monsta::writeMagneticField(pairField, outputPath + "/magneticFieldData", periodicTheory);
+  monsta::writeMagneticField(pairField, outputPath + "/magneticFieldData", theory4d);
   monsta::writeEnergyDensity(pairField, outputPath + "/energyData", periodicTheory);
 
 }
