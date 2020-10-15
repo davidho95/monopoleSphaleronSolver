@@ -3,6 +3,7 @@
 #include "../../include/monopoleSphaleron/GeorgiGlashowSu2TheoryUnitary.hpp"
 #include "../../include/Matrix.hpp"
 #include "../../include/GradDescentSolverBBStep.hpp"
+#include "../../include/GradDescentSolverBBStepNoCheckerboard.hpp"
 #include "../../include/Su2Tools.hpp"
 #include "../../include/MonopoleFileTools.hpp"
 #include "../../include/MonopoleFieldTools.hpp"
@@ -103,6 +104,15 @@ int main(int argc, char **argv)
   }
   theory.applyBoundaryConditions(field);
 
+  for (site.first(); site.test(); site.next())
+  {
+    for (int ii = 0; ii < 4; ii++)
+    {
+      theory.postProcess(field, site, ii);
+    }
+  }
+  theory.applyBoundaryConditions(field);
+
   monsta::scaleVev(field, theory);
 
   monsta::addConstantMagneticField(field, theory, -fluxQuanta);
@@ -111,7 +121,7 @@ int main(int argc, char **argv)
   double E = theory.computeEnergy(field);
   COUT << E << endl;
 
-  solver.solve(theory, field);
+  // solver.solve(theory, field);
 
   monsta::writeRawField(field, outputPath + "/rawData");
   monsta::writeCoords(field, outputPath + "/coords");
