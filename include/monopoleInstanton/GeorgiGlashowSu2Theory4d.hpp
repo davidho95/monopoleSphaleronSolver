@@ -309,7 +309,7 @@ namespace monsta {
           if (matIdx == 0) { continue; }
           Matrix su2Mat = getSu2Link(field, site, matIdx);
           su2Mat = pauli3*su2Mat*pauli3;
-          // setSu2Link(field, siteShiftedFwd, matIdx, su2Mat);
+          setSu2Link(field, siteShiftedFwd, matIdx, su2Mat);
         }
         else
         {
@@ -391,8 +391,6 @@ namespace monsta {
     u1Plaquette = u1Plaquette*conj(field(tempSite, dir2, 0, 0));
 
     double magneticField = 2./gaugeCoupling_*arg(u1Plaquette);
-    // std::vector<double> su2vec = su2ToVec(Matrix(field, site, cpt));
-    // magneticField = su2vec[0];
 
     return (magneticField);
   }

@@ -11,7 +11,7 @@ namespace monsta {
     GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, std::vector<int> boundaryConditions);
     GeorgiGlashowSu2Theory(double gaugeCoupling, double vev, double selfCoupling, std::vector<int> boundaryConditions, bool tHooftLine);
     double getLocalEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
-    double getSymmetricEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
+    double getAsymmetricEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
     std::complex<double> getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx, int rowIdx, int colIdx) const;
     monsta::Matrix getLocalGradient(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int matIdx) const;
     double getVev() const { return vev_; }
@@ -23,6 +23,8 @@ namespace monsta {
     void applyBoundaryConditions(LATfield2::Field< std::complex<double> > &field) const;
     double getHiggsMagnitude(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const;
     Matrix getSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const;
+    void setSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt, Matrix su2Mat) const;
+
 
   private:
     bool tHooftLineCheck(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir) const;
@@ -65,7 +67,7 @@ namespace monsta {
     boundaryConditions_(boundaryConditions), tHooftLine_(tHooftLine)
   {}
 
-  double GeorgiGlashowSu2Theory::getLocalEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
+  double GeorgiGlashowSu2Theory::getAsymmetricEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
   {
     double E = 0;
 
@@ -88,7 +90,7 @@ namespace monsta {
     return E;
   }
 
-  double GeorgiGlashowSu2Theory::getSymmetricEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
+  double GeorgiGlashowSu2Theory::getLocalEnergyDensity(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site) const
   {
     double E = 0;
     LATfield2::Site tempSite(site);
@@ -112,6 +114,7 @@ namespace monsta {
     // Covariant Derivative
     for (int ii = 0; ii < 3; ii++)
     {
+      if (ii != 0) { continue; }
       tempSite = site + ii;
       Matrix covDeriv = field(tempSite, 3, 0, 0)*Matrix(field, site, ii)*pauli3*conjugateTranspose(Matrix(field, site, ii)) - field(site, 3, 0, 0)*pauli3;
       E += 0.5*real(trace(covDeriv*covDeriv));
@@ -332,6 +335,14 @@ namespace monsta {
   Matrix GeorgiGlashowSu2Theory::getSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt) const
   {
     return Matrix(field, site, cpt);
+  }
+
+  void GeorgiGlashowSu2Theory::setSu2Link(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int cpt, Matrix su2Mat) const
+  {
+    field(site, cpt, 0, 0) = su2Mat(0, 0);
+    field(site, cpt, 0, 1) = su2Mat(0, 1);
+    field(site, cpt, 1, 0) = su2Mat(1, 0);
+    field(site, cpt, 1, 1) = su2Mat(1, 1);
   }
 
   monsta::Matrix GeorgiGlashowSu2Theory::getPlaquette(LATfield2::Field< std::complex<double> > &field, LATfield2::Site &site, int dir1, int dir2) const
