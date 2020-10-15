@@ -80,6 +80,51 @@ namespace monsta
     theory.applyBoundaryConditions(outputField);
   };
 
+  void circShift2(LATfield2::Field< std::complex<double> > &inputField,
+    LATfield2::Field< std::complex<double> > &outputField, monsta::Theory &theory, int numShifts, int dir, bool chargeConjugate)
+  {
+    LATfield2::Site siteFrom(inputField.lattice());
+    LATfield2::Site siteTo(outputField.lattice());
+    int size = inputField.lattice().size(dir);
+    int shiftDir = sign(numShifts);
+
+    int shiftsRemaining = numShifts;
+
+    while (abs(shiftsRemaining > 0))
+    {
+      for (siteTo.first(); siteTo.test(); siteTo.next())
+      {
+        if (shiftDir > 0) { siteFrom = siteTo - dir; }
+        if (shiftDir < 0) { siteFrom = siteTo + dir; }
+        if (shiftDir == 0) { siteFrom = siteTo; }
+
+        int numMatrices = 4;
+        for (int ii = 0; ii < 4; ii++)
+        {
+          monsta::Matrix matrixTo(inputField, siteFrom, ii);
+          outputField(siteTo, ii, 0, 0) = matrixTo(0, 0);
+          outputField(siteTo, ii, 0, 1) = matrixTo(0, 1);
+          outputField(siteTo, ii, 1, 0) = matrixTo(1, 0);
+          outputField(siteTo, ii, 1, 1) = matrixTo(1, 1);
+        }
+      }
+      theory.applyBoundaryConditions(outputField);
+      for (siteTo.first(); siteTo.test(); siteTo.next())
+      {
+        for (int ii = 0; ii < 4; ii++)
+        {
+          monsta::Matrix matrixTo(inputField, siteFrom, ii);
+          inputField(siteTo, ii, 0, 0) = outputField(siteTo, ii, 0, 0);
+          inputField(siteTo, ii, 0, 1) = outputField(siteTo, ii, 0, 1);
+          inputField(siteTo, ii, 1, 0) = outputField(siteTo, ii, 1, 0);
+          inputField(siteTo, ii, 1, 1) = outputField(siteTo, ii, 1, 1);
+        }
+      }
+      theory.applyBoundaryConditions(inputField);
+      shiftsRemaining = shiftsRemaining - shiftDir;
+    }
+  }
+
   void setPairInitialConds(LATfield2::Field< std::complex<double> > &singlePoleField,
     LATfield2::Field< std::complex<double> > &pairField, monsta::Theory &theory, int separation)
   {
@@ -229,6 +274,8 @@ void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleFi
       }
     }
   }
+
+  // circShift(rightField, pairField, theory, 0, 0, true);
 
   linearSuperpose(leftField, rightField, pairField, theory);
 }
@@ -413,7 +460,6 @@ void setPairInitialConds2(LATfield2::Field< std::complex<double> > &singlePoleFi
 void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory &theory,
   int fluxQuanta)
   {
-
     LATfield2::Site site(field.lattice());
     double vev = theory.getVev();
     double gaugeCoupling = theory.getGaugeCoupling();
@@ -427,9 +473,9 @@ void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, m
 
     for (site.first(); site.test(); site.next())
     {
-      int xCoord = site.coord(0);
-      int yCoord = site.coord(1);
-      int zCoord = site.coord(2);
+      int xCoord = site.coord(0) - xSize/2;
+      int yCoord = site.coord(1) - ySize/2;
+      int zCoord = site.coord(2) - zSize/2;
 
       for (int ii = 0; ii < 3; ii++)
       {
