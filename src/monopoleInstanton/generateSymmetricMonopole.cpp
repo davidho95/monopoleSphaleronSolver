@@ -180,6 +180,6 @@ int main(int argc, char **argv)
   monsta::writeRawField(field, outputPath + "/rawData");
   monsta::writeCoords(field, outputPath + "/coords");
   monsta::writeHiggsMagnitude(field, outputPath + "/higgsData");
-  monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory4d);
+  monsta::writeMagneticField(field, outputPath + "/magneticFieldData", theory);
   monsta::writeEnergyDensity(field, outputPath + "/energyData", theory);
 }
