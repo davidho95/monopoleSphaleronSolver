@@ -182,7 +182,6 @@ namespace monsta
     double maxGrad = 0;
     for (site.first(); site.test(); site.next())
     {
-      if (site.index() % 2 == 1) { continue; }
       for (int matIdx = 0; matIdx < numMatrices; matIdx++)
       {
         gradMat = Matrix(gradField, site, matIdx);
@@ -231,59 +230,57 @@ namespace monsta
         theory.postProcess(field, site, matIdx);
       }
     }
+    // for (site.first(); site.test(); site.next())
+    // {
+    //   if (site.index() % 2 == 0) { continue; }
+    //   for (int matIdx = 0; matIdx < numMatrices; matIdx++)
+    //   {
+    //     gradMat = Matrix(gradField, site, matIdx);
+    //     monsta::Matrix fieldMat(field, site, matIdx);
+    //     for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
+    //     {
+    //       for (int colIdx = 0; colIdx < numCols; colIdx++)
+    //       {
+    //         gradVal = gradMat(rowIdx, colIdx);
+    //         if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
+    //       }
+    //     }
+    //     gradMat = gradMat - correctionCoeff_*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
+    //     for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
+    //     {
+    //       for (int colIdx = 0; colIdx < numCols; colIdx++)
+    //       {
+    //         vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
+    //         gradVal = gradMat(rowIdx, colIdx);
+    //         gradVals[vecIdx] = gradVal;
+    //         if (matIdx == 3)
+    //         {
+    //           oldGradVal = oldGrads_(site, rowIdx, colIdx);
 
+    //           stepChangeNumerator += abs(real(oldGradVal) * (real(oldGradVal - gradVal)));
+    //           stepChangeNumerator += abs(imag(oldGradVal) * (imag(oldGradVal - gradVal)));
 
-    for (site.first(); site.test(); site.next())
-    {
-      if (site.index() % 2 == 0) { continue; }
-      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
-      {
-        gradMat = Matrix(gradField, site, matIdx);
-        monsta::Matrix fieldMat(field, site, matIdx);
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-        {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
-          {
-            gradVal = gradMat(rowIdx, colIdx);
-            if (abs(gradVal) > abs(maxGrad)) { maxGrad = abs(gradVal); }
-          }
-        }
-        gradMat = gradMat - correctionCoeff_*gradDotRef*monsta::Matrix(referenceField, site, matIdx);
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-        {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
-          {
-            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
-            gradVal = gradMat(rowIdx, colIdx);
-            gradVals[vecIdx] = gradVal;
-            if (matIdx == 3)
-            {
-              oldGradVal = oldGrads_(site, rowIdx, colIdx);
+    //           stepChangeDenominator += pow(abs(gradVal - oldGradVal),2);
+    //           oldGrads_(site, rowIdx, colIdx) = gradVal;
+    //         }
+    //       }
+    //     }
+    //   }
 
-              stepChangeNumerator += abs(real(oldGradVal) * (real(oldGradVal - gradVal)));
-              stepChangeNumerator += abs(imag(oldGradVal) * (imag(oldGradVal - gradVal)));
-
-              stepChangeDenominator += pow(abs(gradVal - oldGradVal),2);
-              oldGrads_(site, rowIdx, colIdx) = gradVal;
-            }
-          }
-        }
-      }
-
-      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
-      {
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
-        {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
-          {
-            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
-            fieldVal = field(site, matIdx, rowIdx, colIdx);
-            field(site, matIdx, rowIdx, colIdx) = fieldVal - stepSize_*gradVals[vecIdx];
-          }
-        }
-        theory.postProcess(field, site, matIdx);
-      }
-    }
+    //   for (int matIdx = 0; matIdx < numMatrices; matIdx++)
+    //   {
+    //     for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
+    //     {
+    //       for (int colIdx = 0; colIdx < numCols; colIdx++)
+    //       {
+    //         vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
+    //         fieldVal = field(site, matIdx, rowIdx, colIdx);
+    //         field(site, matIdx, rowIdx, colIdx) = fieldVal - stepSize_*gradVals[vecIdx];
+    //       }
+    //     }
+    //     theory.postProcess(field, site, matIdx);
+    //   }
+    // }
 
     parallel.sum(stepChangeNumerator);
     parallel.sum(stepChangeDenominator);
