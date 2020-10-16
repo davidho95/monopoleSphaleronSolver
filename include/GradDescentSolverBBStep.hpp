@@ -21,6 +21,9 @@ namespace monsta
 
     void setParams(double tol, int maxIterations, double initialStepSize, double maxStepSize);
 
+    bool checkerboardColour(LATfield2::Site &site);
+
+
   private:
     double tol_;
     int maxIterations_;
@@ -31,10 +34,13 @@ namespace monsta
     int minSteps_ = 0;
     bool minimiseGrad_ = false;
     bool constantStep_ = false;
+    int numRows_;
+    int numCols_;
+    int numMatrices_;
     // LATfield2::Field< std::complex<double> > oldGrads;
 
     void iterate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads);
-    void checkerboardUpdate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads, bool isEven, double &stepChangeNumerator, double &stepChangeDenominator, double &maxGrad);
+    void checkerboardUpdate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads, bool isBlack, double &stepChangeNumerator, double &stepChangeDenominator, double &maxGrad);
   };
 
   GradDescentSolver::GradDescentSolver(double tol, int maxIterations, double initialStepSize, double maxStepSize)
@@ -61,6 +67,9 @@ namespace monsta
     double relEnergyChange = 1e6;
     double energyOld;
     LATfield2::Field< std::complex<double> > oldGrads(field.lattice(), field.rows(), field.cols(), field.symmetry());
+    numRows_ = field.rows();
+    numCols_ = field.cols();
+    numMatrices_ = field.components() / (numRows_*numCols_);
 
     iterate(field, theory, oldGrads);
     energyOld = energy;
@@ -145,10 +154,10 @@ namespace monsta
 
     double maxGrad = 0;
 
-    bool isEven = true;
-    checkerboardUpdate(field, theory, oldGrads, isEven, stepChangeNumerator, stepChangeDenominator, maxGrad);
-    isEven = false;
-    checkerboardUpdate(field, theory, oldGrads, isEven, stepChangeNumerator, stepChangeDenominator, maxGrad);
+    bool isBlack = true;
+    checkerboardUpdate(field, theory, oldGrads, isBlack, stepChangeNumerator, stepChangeDenominator, maxGrad);
+    isBlack = false;
+    checkerboardUpdate(field, theory, oldGrads, isBlack, stepChangeNumerator, stepChangeDenominator, maxGrad);
 
     parallel.sum(stepChangeNumerator);
     parallel.sum(stepChangeDenominator);
@@ -163,19 +172,16 @@ namespace monsta
     parallel.max(maxGrad_);
   }
 
-  void GradDescentSolver::checkerboardUpdate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads, bool isEven, double &stepChangeNumerator, double &stepChangeDenominator, double &maxGrad)
+  void GradDescentSolver::checkerboardUpdate(LATfield2::Field< std::complex<double> > &field, monsta::Theory &theory, LATfield2::Field< std::complex<double> > &oldGrads, bool isBlack, double &stepChangeNumerator, double &stepChangeDenominator, double &maxGrad)
   {
     LATfield2::Site site(field.lattice());
-    int numRows = field.rows();
-    int numCols = field.cols();
-    int numMatrices = field.components() / (numRows*numCols);
 
     for (site.first(); site.test(); site.next())
     {
       int vecIdx;
-      std::vector< std::complex<double> > gradVals(numRows*numCols*numMatrices);
-      if (site.index() % 2 == isEven) { continue; }
-      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
+      std::vector< std::complex<double> > gradVals(numRows_*numCols_*numMatrices_);
+      if (checkerboardColour(site) == isBlack) { continue; }
+      for (int matIdx = 0; matIdx < numMatrices_; matIdx++)
       {
         monsta::Matrix fieldMat(field, site, matIdx);
         monsta::Matrix gradMat = theory.getLocalGradient(field, site, matIdx);
@@ -184,11 +190,11 @@ namespace monsta
         {
           gradMatProj = gradMat - 0.5*real(trace(gradMat*conjugateTranspose(fieldMat)))*fieldMat;
         }
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
+        for (int rowIdx = 0; rowIdx < numRows_; rowIdx++)
         {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
+          for (int colIdx = 0; colIdx < numCols_; colIdx++)
           {
-            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
+            vecIdx = colIdx + numCols_ * (rowIdx + numRows_ * matIdx);
             std::complex<double> gradVal = gradMat(rowIdx, colIdx);
             gradVals[vecIdx] = gradVal;
             std::complex<double> projGradVal = gradMatProj(rowIdx, colIdx);
@@ -210,18 +216,77 @@ namespace monsta
           }
         }
       }
-      for (int matIdx = 0; matIdx < numMatrices; matIdx++)
+      for (int matIdx = 0; matIdx < numMatrices_; matIdx++)
       {
-        for (int rowIdx = 0; rowIdx < numRows; rowIdx++)
+        for (int rowIdx = 0; rowIdx < numRows_; rowIdx++)
         {
-          for (int colIdx = 0; colIdx < numCols; colIdx++)
+          for (int colIdx = 0; colIdx < numCols_; colIdx++)
           {
-            vecIdx = colIdx + numCols * (rowIdx + numRows * matIdx);
+            vecIdx = colIdx + numCols_ * (rowIdx + numRows_ * matIdx);
             std::complex<double> fieldVal = field(site, matIdx, rowIdx, colIdx);
             field(site, matIdx, rowIdx, colIdx) = fieldVal - stepSize_*gradVals[vecIdx];
           }
         }
         theory.postProcess(field, site, matIdx);
+      }
+    }
+  }
+
+  bool GradDescentSolver::checkerboardColour(LATfield2::Site &site)
+  //Assumes 3D with dimensions (odd, odd, odd) or (even, even, even)
+  {
+    if (site.lattice().size(0) % 2 == 1)
+    {
+      return site.index() % 2;
+    }
+    if (site.coord(0) % 2 == 0)
+    {
+      if (site.coord(1) % 2 == 0)
+      {
+        if (site.coord(2) % 2 == 0)
+        {
+          return true;
+        }
+        else
+        {
+          return false;
+        }
+      }
+      else
+      {
+        if (site.coord(2) % 2 == 0)
+        {
+          return false;
+        }
+        else
+        {
+          return true;
+        }
+      }
+    }
+    else
+    {
+      if (site.coord(1) % 2 == 0)
+      {
+        if (site.coord(2) % 2 == 0)
+        {
+          return false;
+        }
+        else
+        {
+          return true;
+        }
+      }
+      else
+      {
+        if (site.coord(2) % 2 == 0)
+        {
+          return true;
+        }
+        else
+        {
+          return false;
+        }
       }
     }
   }
