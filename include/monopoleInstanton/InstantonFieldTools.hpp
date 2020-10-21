@@ -119,6 +119,51 @@ namespace monsta
     theory.applyBoundaryConditions(field);
   }
 
+  void addConstantMagneticField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowRadialTheory &theory,
+  int fluxQuanta)
+  {
+
+    LATfield2::Site site(field.lattice());
+    double vev = theory.getVev();
+    double gaugeCoupling = theory.getGaugeCoupling();
+    int xSize = field.lattice().size(0);
+    int ySize = field.lattice().size(1);
+    int zSize = field.lattice().size(2);
+
+    double pi = 4*std::atan(1);
+    double flux = fluxQuanta*4*pi;
+    int fluxSign = fluxQuanta == 0 ? 0 : fluxQuanta / abs(fluxQuanta);
+
+    for (site.first(); site.test(); site.next())
+    {
+      int xCoord = site.coord(0);
+      int yCoord = site.coord(1);
+      int zCoord = site.coord(2);
+
+      for (int ii = 0; ii < 3; ii++)
+      {
+        std::vector<double> su2Vec = monsta::su2ToVec(Matrix(field, site, ii));
+        if (ii == 2)
+        {
+          su2Vec[2] += 0.5*flux/pow(ySize,2)*(yCoord - 0.5);
+          if (yCoord > 0)
+          {
+            su2Vec[2] -= 0.5*flux/ySize;
+          }
+        }
+        if (ii == 1 && yCoord == 0)
+        {
+          su2Vec[2] -= 0.5*zCoord*flux/zSize;
+        }
+        monsta::Matrix su2Mat = monsta::vecToSu2(su2Vec);
+        theory.setSu2Link(field, site, ii, su2Mat);
+        theory.postProcess(field, site, ii);
+      }
+    }
+
+    theory.applyBoundaryConditions(field);
+  }
+
   void scaleVev(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory4d &theory)
   {
     LATfield2::Site site(field.lattice());
