@@ -256,6 +256,45 @@ namespace monsta
   theory.applyBoundaryConditions(contractedField);
   }
 
+  void contractRadialInstanton(LATfield2::Field< std::complex<double> > &field,
+    LATfield2::Field< std::complex<double> > &contractedField, monsta::Theory &theory)
+  {
+    LATfield2::Site siteFrom(field.lattice());
+    LATfield2::Site siteTo(contractedField.lattice());
+    for (siteTo.first(); siteTo.test(); siteTo.next())
+    {
+      int xCoord = siteTo.coord(0);
+      int yCoord = siteTo.coord(1);
+      int zCoord = siteTo.coord(2);
+
+      int xCoordFrom;
+      int xSize = field.lattice().size(0);
+      if (xCoord < xSize - 1)
+      {
+        xCoordFrom = xCoord + 1;
+      }
+      else
+      {
+        xCoordFrom = xCoord;
+      }
+
+      siteFrom.setCoord(xCoordFrom, yCoord, zCoord);
+
+      int numMatrices = 4;
+      {
+        for (int ii = 0; ii < numMatrices; ii++)
+        {
+          monsta::Matrix matrixTo(field, siteFrom, ii);
+          contractedField(siteTo, ii, 0, 0) = matrixTo(0, 0);
+          contractedField(siteTo, ii, 0, 1) = matrixTo(0, 1);
+          contractedField(siteTo, ii, 1, 0) = matrixTo(1, 0);
+          contractedField(siteTo, ii, 1, 1) = matrixTo(1, 1);
+        }
+      }
+    }
+    theory.applyBoundaryConditions(contractedField);
+  }
+
   
 }
 
