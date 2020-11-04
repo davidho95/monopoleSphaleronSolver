@@ -27,6 +27,23 @@ namespace monsta
     theory.applyBoundaryConditions(field);
   }
 
+  void setVacuumField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowRadialTheory &theory)
+  {
+    double vev = theory.getVev();
+
+    LATfield2::Site site(field.lattice());
+
+    for (site.first(); site.test(); site.next())
+    {
+      for (int matIdx = 0; matIdx < 3; matIdx++)
+      {
+        theory.setSu2Link(field, site, matIdx, identity);
+      }
+      theory.setHiggsMagnitude(field, site, vev/sqrt(2));
+    }
+    theory.applyBoundaryConditions(field);
+  }
+
   void setRandomField(LATfield2::Field< std::complex<double> > &field, monsta::GeorgiGlashowSu2Theory4d &theory)
   {
     LATfield2::Site site(field.lattice());
